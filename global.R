@@ -14,8 +14,10 @@ sites <- readxl::read_excel("data/WSC_Station_locations-06-03-2024.xlsx", sheet 
                                     is.na(category3) ~ paste(cat, category1, category2, sep = ", "),
                                     TRUE ~ paste(cat, category1, category2, category3, sep = ", ")))
 
-dat <- read_csv("data/sampleDat.csv.gz") %>%
+dat <- read_csv("data/partialDataLongDate.csv.gz") %>%
   left_join(sites)
+
+days <- read_csv("data/days.csv")
 
 # # make a sample dat
 # datSample <- dat %>%
@@ -98,7 +100,7 @@ coverData <- function(dat, cover) {
 
 # plot functions--------------
 
-yearPlot <- function(dat) {
+yearPlot <- function(dat, title) {
   
   dat <- dat %>%
     mutate(monthName = month.abb[month]) 
@@ -109,20 +111,67 @@ yearPlot <- function(dat) {
   
   #title = paste0("Temperatures at ", dat$sid, " in ", dat$year, ": ", dat$categoryString)
   
-  title = paste0("Temperatures in ", dat$year)
-  
   ggplot(data = dat, aes(x = monthName, y = tempC)) +
     geom_boxplot(fill="slateblue", alpha=0.5) +
-    geom_jitter(color="black", size=0.4, alpha=0.6) +
+    geom_jitter(color="black", size=0.4, alpha=0.4) +
     xlab("Month") +
     ylab("Temp (C)") +
     ggtitle(title)
   
 }
-# siteMonth <- dat %>%
-#   filter(sid = site, "2023-02-14"
-#          )
 
-# day : "2022-02-28"
+monthPlot <- function(dat, title) {
+  
+  dat <- dat %>%
+    group_by(day) %>%
+    summarise(meanTemp = mean(tempC, na.rm = TRUE),
+              minTemp = min(tempC, na.rm = TRUE),
+              maxTemp = max(tempC, na.rm = TRUE))
+  
+  print(summary(dat))
+  
+  ggplot(data = dat, aes(x = day, y = meanTemp)) +
+    geom_point() +
+    geom_line() +
+    geom_errorbar(aes(ymin = minTemp, ymax = maxTemp, alpha = 0.5, width = 0.5)) +
+    xlab("Day of month") +
+    ylab("Min, mean and max temp (C)") + 
+    ggtitle(title) +
+    theme(legend.position="none")
+}
 
+dayPlot <- function(dat, title, datType) {
+  
+  if(datType == "site") {
+    p <- ggplot(data = dat, aes(x = Time1, y = tempC)) +
+      geom_point() +
+      geom_line() +
+      #geom_errorbar(aes(ymin = minTemp, ymax = maxTemp, alpha = 0.5, width = 0.5)) +
+      xlab("Time of day") +
+      ylab("Temp (C)") + 
+      ggtitle(title) 
+  } else if(datType == "landcover") { 
+    
+    print("inside land cover day plot")
+    dat <- dat %>%
+      group_by(Time1) %>%
+      summarise(meanTemp = mean(tempC, na.rm = TRUE),
+                sdTemp = sd(tempC, na.rm = TRUE),
+                count = n(),
+                seTemp = sdTemp/sqrt(count))
+    
+    print(summary(dat))
+    
+    p <- ggplot(data = dat, aes(x = Time1, y = meanTemp)) +
+      geom_point() +
+      geom_line() +
+      geom_errorbar(aes(ymin = meanTemp - seTemp, ymax = meanTemp + seTemp)) +
+      xlab("Time of day") +
+      ylab("Mean temp (C) +/- se") +
+      ggtitle(title)
+  }
+  
+  return(p)
+  
+}
 
