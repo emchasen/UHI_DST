@@ -15,6 +15,8 @@ server <- function(input, output, session) {
   sidData <- reactiveVal()
   # to label which data set
   spaceFilter <- reactiveVal()
+  # landCover for reset
+  cover <- reactiveVal()
   
    observeEvent(input$filterSpace, {
      
@@ -24,6 +26,7 @@ server <- function(input, output, session) {
         
         leafletProxy("map") %>%
           clearGroup("circles") %>%
+          clearGroup("landCoverRaster") %>%
           addCircleMarkers(data = sites_sf,
                             lng = ~lon, lat = ~lat,
                             layerId = ~sid,
@@ -48,27 +51,29 @@ server <- function(input, output, session) {
            uiOutput("siteID")
          )
         })
-
+       
+       cover(NULL)
+       
      } else if(input$filterSpace == "Land cover") {
        
        spaceFilter("landcover")
 
        leafletProxy("map") %>%
-         clearGroup("sites") %>%
-         clearGroup("circles") %>%
-         addRasterImage(landCover, group = "landCover",
-                        colors = c("#b50101", "#e8d1d2",  "#cb9147", "darkgreen", "skyblue1", "steelblue3", "wheat")) %>%
-         addLegend("topleft", pal = palCover, values = c("Urban", "Suburban", "Rural/Ag", "Forest", "Open water", "Wetland", "Barren/shrubland"),
-                   title = "Land groups",
-                   layerId = "landLegend",
-                   #labFormat = labelFormat(prefix = "$"),
-                   opacity = 1)
+         clearGroup("sites")# %>%
+         #clearGroup("circles") #%>%
+         #addRasterImage(landCover, group = "landCoverRaster",
+          #              colors = c("#b50101", "#e8d1d2",  "#cb9147", "darkgreen", "skyblue1", "steelblue3", "wheat")) %>%
+         # addLegend("topleft", pal = palCover, values = c("Urban", "Suburban", "Rural/Ag", "Forest", "Open water", "Wetland", "Barren/shrubland"),
+         #           title = "Land groups",
+         #           layerId = "landLegend",
+         #           #labFormat = labelFormat(prefix = "$"),
+         #           opacity = 1)
 
        output$landCoverSelectUI <- renderUI({
 
          req(input$filterSpace == "Land cover")
-         selectInput(inputId = "landCover", label = "Select land cover", choices = c("Rural", "Suburban", "Urban"))
-
+         selectInput(inputId = "landCover", label = "Select land cover", choices = c(" ", "Rural", "Suburban", "Urban"))
+         
        })
        
        sid(NULL)
@@ -80,7 +85,6 @@ server <- function(input, output, session) {
    
   observeEvent(input$map_marker_click, {
     
-    print(input$map_marker_click)
     click <- input$map_marker_click
     sid(click$id)
     
@@ -103,16 +107,22 @@ server <- function(input, output, session) {
     
   })
   
-  # observeEvent(input$landCover, {
-  #   
-  #   lcData <- coverData(dat, input$landCover)
-  #   landData(lcData)
-  #   
-  # })
+  observeEvent(input$landCover, {
+
+    if(input$landCover != " ") {
+      landcover <- input$landCover
+      print(landcover)
+      cover(landcover)
+    }
+
+  })
   
   output$filterTimeUI <- renderUI({
     
-    req(input$filterSpace != " ")
+    #req(input$filterSpace != " ")
+    req(isTruthy(cover()) || isTruthy(sid()))
+    print("inside filterTimeUI")
+    print(input$landCover)
     tagList(
       selectInput(inputId = "filterTime", label = "Filter data in time by:", choices = c(" ", "Year", "Month", "Day")),
       uiOutput("timeSelectUI")
@@ -123,35 +133,16 @@ server <- function(input, output, session) {
   
   output$timeSelectUI <- renderUI({
     
-    #req(input$filterTime != " ")
     req(
       isTruthy(sidData()) || isTruthy(input$landCover)
       )
-    
-    print("insideTimeSelect")
-    print(spaceFilter())
     
     tagList(
       uiOutput("yearSelect"),
       uiOutput("monthSelect"),
       uiOutput("daySelect")
     )
-    # if(input$filterTime == "Year") {
-    #   selectInput(inputId = "year", label = "Select year", choices = c("", yearChoices))
-    # } else if(input$filterTime == "Month") {
-    #   monthChoices = siteYearData(sidData(), yearSelect = input$year)
-    #   print(monthChoices)
-    #   # tagList(
-    #   #   selectInput(inputId = "year", label = "Select year", choices = c("", yearChoices)),
-    #   #   selectInput(inputId = "month", label = "Select month", choices = monthChoices)
-    #   # )
-    #  } else if(input$filterTime == "Day") {
-    #    tagList(
-    #      selectInput(inputId = "year", label = "Select year", choices = c("", yearChoices)),
-    #      selectInput(inputId = "month", label = "Select month", choices = monthChoices),
-    #      selectInput(inputId = "day", label = "Select day", choices = 1:31)
-    #    )
-    #  }
+   
   })
   
   output$yearSelect <- renderUI({
@@ -174,9 +165,12 @@ server <- function(input, output, session) {
       monthChoices <- siteYearData(sidData(), input$year)
       monthChoices <- month.abb[sort(unique(monthChoices$month))]
     } else {
-      monthChoices <- month.abb[1:12]
+      if(input$year == 2012) {
+        monthChoices <- month.abb[4:12]
+      } else{
+        monthChoices <- month.abb[1:12]
+      }
     }
-    
     print(monthChoices)
     selectInput(inputId = "month", label = "Select month", choices = c("", monthChoices))
   
@@ -203,26 +197,29 @@ server <- function(input, output, session) {
     
   })
   
-output$plotUI <- renderUI({
-
-  req(isTruthy(input$year),
+  output$plotUI <- renderUI({
+    
+    req(isTruthy(input$year),
       isTruthy(sidData()) || isTruthy(input$landCover)
-  )
-  
-  if(input$filterTime == "Year") {
-    plotOutput("yearFig")
-  } else if(input$filterTime == "Month") {
-    plotOutput("monthFig")
-  } else {
-    plotOutput("dayFig")
-  }
-  # tagList(
-  #   plotOutput("yearFig"),
-  #   plotOutput("monthFig"),
-  #   plotOutput("dayFig")
-  # )
-
+    )
+    
+    if(input$filterTime == "Year") {
+      plotOutput("yearFig")
+    } else if(input$filterTime == "Month") {
+      plotOutput("monthFig")
+    } else {
+      plotOutput("dayFig")
+    }
+   
   })
+  
+    output$addSelectionUI <- renderUI({
+      
+      req(input$year)
+      wellPanel(checkboxInput(inputId = "addSelect", label = "Compare additional location(s)", value = FALSE))
+  
+    })
+  
 
 output$yearFig <- renderPlot({
   
@@ -231,7 +228,7 @@ output$yearFig <- renderPlot({
   #if whichever data is selected, and then filter to the year
   if(spaceFilter() == "site") {
     sidDat <- sidData() %>% filter(year == input$year) 
-    title <- paste("Temperatures at", sid(), "in", input$year)
+    title <- paste0("Temperatures at ", sid(), " in ", input$year, ": ", sidDat$categoryString)
     p <- yearPlot(sidDat, title)
   } else {
     title <- paste("Temperatures in", input$landCover, "areas in", input$year)

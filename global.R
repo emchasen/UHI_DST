@@ -1,5 +1,6 @@
 #install libraries
 library(shiny)
+library(shinyjs)
 library(tidyverse)
 library(sf)
 library(leaflet)
@@ -16,6 +17,9 @@ sites <- readxl::read_excel("data/WSC_Station_locations-06-03-2024.xlsx", sheet 
 
 dat <- read_csv("data/partialDataLongDate.csv.gz") %>%
   left_join(sites)
+
+# dat <- read_csv("data/sampleDat.csv.gz") %>%
+#   left_join(sites)
 
 days <- read_csv("data/days.csv")
 
@@ -111,9 +115,10 @@ yearPlot <- function(dat, title) {
   
   #title = paste0("Temperatures at ", dat$sid, " in ", dat$year, ": ", dat$categoryString)
   
+  ##TODO get rid of geom_jitter for landcover
   ggplot(data = dat, aes(x = monthName, y = tempC)) +
     geom_boxplot(fill="slateblue", alpha=0.5) +
-    geom_jitter(color="black", size=0.4, alpha=0.4) +
+    #geom_jitter(color="black", size=0.4, alpha=0.4) +
     xlab("Month") +
     ylab("Temp (C)") +
     ggtitle(title)
