@@ -1,12 +1,13 @@
 #install libraries
 library(shiny)
-library(shinyjs)
+#library(shinyjs)
 library(tidyverse)
 library(sf)
 library(leaflet)
 library(plotly)
-library(terra)
-library(lubridate)
+#library(terra)
+#library(lubridate)
+library(shinycssloaders)
 
 
 # load data
@@ -107,21 +108,28 @@ coverData <- function(dat, cover) {
 yearPlot <- function(dat, title) {
   
   dat <- dat %>%
-    mutate(monthName = month.abb[month]) 
+    mutate(monthName = month.abb[month],
+           tempC = round(tempC, 1)) 
   
   dat$monthName = fct_relevel(dat$monthName, "Jan", "Feb", "Mar", "Apr", "May",
                               "Jun", "Jul", "Aug", "Sep", "Oct",
                               "Nov", "Dec")
   
-  #title = paste0("Temperatures at ", dat$sid, " in ", dat$year, ": ", dat$categoryString)
+  # p <- plotly(data = dat, aes(x = monthName, y = tempC)) +
+  #   geom_boxplot(fill="slateblue", alpha=0.5) +
+  #   xlab("Month") +
+  #   ylab("Temp (C)") +
+  #   ggtitle(title) +
+  #   theme(text = element_text(size = 18))
+  p <- plot_ly(data = dat) %>%
+    add_trace(y = ~tempC, x = ~monthName, type = "box",
+              color=I("slateblue")) %>%
+    layout(title = list(text = title, font = list(size = 20), y = 0.95),
+           xaxis = list(title = list(text = "Month", font = list(size = 20))),
+           yaxis = list(title = list(text = "Mean temp (C)", font = list(size = 20))))
+    
   
-  ##TODO get rid of geom_jitter for landcover
-  ggplot(data = dat, aes(x = monthName, y = tempC)) +
-    geom_boxplot(fill="slateblue", alpha=0.5) +
-    #geom_jitter(color="black", size=0.4, alpha=0.4) +
-    xlab("Month") +
-    ylab("Temp (C)") +
-    ggtitle(title)
+  return(p)
   
 }
 
@@ -133,31 +141,41 @@ monthPlot <- function(dat, title) {
               minTemp = min(tempC, na.rm = TRUE),
               maxTemp = max(tempC, na.rm = TRUE))
   
-  print(summary(dat))
+  p <- plot_ly(data = dat, x = ~day) %>%
+    add_trace(y =~meanTemp, type = 'scatter', mode = 'lines+markers', 
+              hoverinfo = "text", 
+              line = list(color = "#000000"),
+              marker = list(color = "#000000"),
+              hovertext = ~paste("Max temp:", round(maxTemp, 1), "<br>",
+                                 "Mean temp:", round(meanTemp, 1), "<br>",
+                                 "Min temp:", round(minTemp,1)),
+              error_y = ~list(array = c(maxTemp - meanTemp),
+                              arrayminus = c(meanTemp - minTemp),
+                              color = '#000000')) %>%
+    layout(title = list(text = title, font = list(size = 20), y = 0.95),
+           xaxis = list(title = list(text = "Day of month", font = list(size = 20))),
+           yaxis = list(title = list(text = "Mean temp (C)", font = list(size = 20))))
   
-  ggplot(data = dat, aes(x = day, y = meanTemp)) +
-    geom_point() +
-    geom_line() +
-    geom_errorbar(aes(ymin = minTemp, ymax = maxTemp, alpha = 0.5, width = 0.5)) +
-    xlab("Day of month") +
-    ylab("Min, mean and max temp (C)") + 
-    ggtitle(title) +
-    theme(legend.position="none")
+  return(p)
+  
 }
 
 dayPlot <- function(dat, title, datType) {
   
   if(datType == "site") {
-    p <- ggplot(data = dat, aes(x = Time1, y = tempC)) +
-      geom_point() +
-      geom_line() +
-      #geom_errorbar(aes(ymin = minTemp, ymax = maxTemp, alpha = 0.5, width = 0.5)) +
-      xlab("Time of day") +
-      ylab("Temp (C)") + 
-      ggtitle(title) 
+    p <- plot_ly(data = dat) %>%
+      add_trace(x = ~Time1, y = ~tempC, type = 'scatter', mode = 'lines+markers',
+                line = list(color = "#000000"),
+                marker = list(color = "#000000")) %>%
+      layout(title = list(text = title, font = list(size = 20), y = 0.95),
+             xaxis = list(title = list(text = "Time of day", font = list(size = 20))),
+             yaxis = list(title = list(text = "Temp (C)", font = list(size = 20))))
+    
   } else if(datType == "landcover") { 
     
     print("inside land cover day plot")
+
+  
     dat <- dat %>%
       group_by(Time1) %>%
       summarise(meanTemp = mean(tempC, na.rm = TRUE),
@@ -167,13 +185,19 @@ dayPlot <- function(dat, title, datType) {
     
     print(summary(dat))
     
-    p <- ggplot(data = dat, aes(x = Time1, y = meanTemp)) +
-      geom_point() +
-      geom_line() +
-      geom_errorbar(aes(ymin = meanTemp - seTemp, ymax = meanTemp + seTemp)) +
-      xlab("Time of day") +
-      ylab("Mean temp (C) +/- se") +
-      ggtitle(title)
+    p <- plot_ly(data = dat) %>%
+      add_trace(x = ~Time1, y = ~meanTemp, 
+                type = 'scatter', mode = 'lines+markers',
+                line = list(color = "#000000"),
+                marker = list(color = "#000000"),
+                hoverinfo = "text",
+                hovertext = ~paste("Mean temp:", round(meanTemp, 1)),
+                error_y = ~list(array = c(seTemp),
+                                color = '#000000')) %>%
+      layout(title = list(text = title, font = list(size = 20), y = 0.95),
+             xaxis = list(title = list(text = "Time of day", font = list(size = 20))),
+             yaxis = list(title = list(text = "Mean temp (C) +/- se", font = list(size = 20))))
+      
   }
   
   return(p)

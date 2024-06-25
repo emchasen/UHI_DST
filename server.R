@@ -204,11 +204,11 @@ server <- function(input, output, session) {
     )
     
     if(input$filterTime == "Year") {
-      plotOutput("yearFig")
+      withSpinner(plotlyOutput("yearFig"), type = 8)
     } else if(input$filterTime == "Month") {
-      plotOutput("monthFig")
+      withSpinner(plotlyOutput("monthFig"), type = 8)
     } else {
-      plotOutput("dayFig")
+      withSpinner(plotlyOutput("dayFig"), type = 8)
     }
    
   })
@@ -221,7 +221,7 @@ server <- function(input, output, session) {
     })
   
 
-output$yearFig <- renderPlot({
+output$yearFig <- renderPlotly({
   
   req(input$year)
   req(input$filterTime == "Year")
@@ -241,7 +241,7 @@ output$yearFig <- renderPlot({
   
 })
 
-output$monthFig <- renderPlot({
+output$monthFig <- renderPlotly({
   
   req(input$filterTime == "Month")
   req(input$month)
@@ -266,7 +266,7 @@ output$monthFig <- renderPlot({
   
 })
 
-output$dayFig <- renderPlot({
+output$dayFig <- renderPlotly({
   
   req(input$filterTime == "Day")
   req(input$day)

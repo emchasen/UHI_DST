@@ -25,5 +25,6 @@ ui <- fluidPage(
              uiOutput("filterTimeUI"))
       )),
   br(),
+  br(),
   uiOutput("plotUI")
 )
