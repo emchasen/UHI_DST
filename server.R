@@ -18,6 +18,7 @@ server <- function(input, output, session) {
   # landCover for reset
   cover <- reactiveVal()
   
+  # change map display for filterSpace-----------
    observeEvent(input$filterSpace, {
      
       if(input$filterSpace == "Site") {
@@ -27,6 +28,7 @@ server <- function(input, output, session) {
         leafletProxy("map") %>%
           clearGroup("circles") %>%
           clearGroup("landCoverRaster") %>%
+          #setView(lat = 43.08, lng = -89.37, zoom = 10) %>%
           addCircleMarkers(data = sites_sf,
                             lng = ~lon, lat = ~lat,
                             layerId = ~sid,
@@ -59,10 +61,11 @@ server <- function(input, output, session) {
        spaceFilter("landcover")
 
        leafletProxy("map") %>%
-         clearGroup("sites")# %>%
-         #clearGroup("circles") #%>%
-         #addRasterImage(landCover, group = "landCoverRaster",
-          #              colors = c("#b50101", "#e8d1d2",  "#cb9147", "darkgreen", "skyblue1", "steelblue3", "wheat")) %>%
+         clearGroup("sites") #%>%
+         #clearGroup("circles") %>%
+         #setView(lat = 43.08, lng = -89.37, zoom = 11) %>%
+         # addRasterImage(landCover, group = "landCoverRaster",
+         #              colors = c("#b50101", "#e8d1d2",  "#cb9147", "darkgreen", "skyblue1", "steelblue3", "wheat")) %>%
          # addLegend("topleft", pal = palCover, values = c("Urban", "Suburban", "Rural/Ag", "Forest", "Open water", "Wetland", "Barren/shrubland"),
          #           title = "Land groups",
          #           layerId = "landLegend",
@@ -83,6 +86,7 @@ server <- function(input, output, session) {
    })
   
    
+  # create sid-------------------
   observeEvent(input$map_marker_click, {
     
     click <- input$map_marker_click
@@ -107,6 +111,7 @@ server <- function(input, output, session) {
     
   })
   
+  # create landcover----------------
   observeEvent(input$landCover, {
 
     if(input$landCover != " ") {
@@ -117,6 +122,7 @@ server <- function(input, output, session) {
 
   })
   
+  # filterTimeUI--------------------
   output$filterTimeUI <- renderUI({
     
     #req(input$filterSpace != " ")
@@ -130,7 +136,7 @@ server <- function(input, output, session) {
     
   })
   
-  
+  # timeSelectUI-------------
   output$timeSelectUI <- renderUI({
     
     req(
@@ -166,7 +172,7 @@ server <- function(input, output, session) {
       monthChoices <- month.abb[sort(unique(monthChoices$month))]
     } else {
       if(input$year == 2012) {
-        monthChoices <- month.abb[4:12]
+        monthChoices <- month.abb[3:12] ##TODO check if it should be march (3) or april
       } else{
         monthChoices <- month.abb[1:12]
       }
@@ -197,6 +203,7 @@ server <- function(input, output, session) {
     
   })
   
+  #plotUI---------------------------
   output$plotUI <- renderUI({
     
     req(isTruthy(input$year),
@@ -225,16 +232,17 @@ output$yearFig <- renderPlotly({
   
   req(input$year)
   req(input$filterTime == "Year")
+  deg = input$tempLabel
   #if whichever data is selected, and then filter to the year
   if(spaceFilter() == "site") {
     sidDat <- sidData() %>% filter(year == input$year) 
     title <- paste0("Temperatures at ", sid(), " in ", input$year, ": ", sidDat$categoryString)
-    p <- yearPlot(sidDat, title)
+    p <- yearPlot(sidDat, title, degree = deg)
   } else {
     title <- paste("Temperatures in", input$landCover, "areas in", input$year)
     landCoverDat <- dat %>% filter(cat == input$landCover, year == input$year)
     print(head(landCoverDat))
-    p <- yearPlot(landCoverDat, title)
+    p <- yearPlot(landCoverDat, title, degree = deg)
   }
   
   return(p)
@@ -245,6 +253,7 @@ output$monthFig <- renderPlotly({
   
   req(input$filterTime == "Month")
   req(input$month)
+  deg = input$tempLabel
   
   if(spaceFilter() == "site") {
     #print("inside site month plot")
@@ -254,12 +263,12 @@ output$monthFig <- renderPlotly({
     # print(summary(sidDat))
     title <- paste("Temperatures at", sid(), "in", input$month, input$year)
     #print(title)
-    p <- monthPlot(sidDat, title)
+    p <- monthPlot(sidDat, title, degree = deg)
   } else {
     title <- paste("Temperatures in", input$landCover, "areas in", input$month, input$year)
     landCoverDat <- dat %>% filter(cat == input$landCover, year == input$year, month == match(input$month, month.abb))
     print(head(landCoverDat))
-    p <- monthPlot(landCoverDat, title)
+    p <- monthPlot(landCoverDat, title, degree = deg)
   }
   
   return(p)
@@ -270,6 +279,7 @@ output$dayFig <- renderPlotly({
   
   req(input$filterTime == "Day")
   req(input$day)
+  deg = input$tempLabel
   
   if(spaceFilter() == "site") {
     print("inside site day plot")
@@ -279,12 +289,12 @@ output$dayFig <- renderPlotly({
     # print(summary(sidDat))
     title <- paste0("Temperatures at ", sid(), " on ", input$month, " ", input$day, ", ", input$year)
     #print(title)
-    p <- dayPlot(sidDat, title, "site")
+    p <- dayPlot(sidDat, title, degree = deg, datType = "site")
   } else {
     title <- paste0("Temperatures in ", input$landCover, " areas on ", input$month, " ", input$day, ", ", input$year)
     landCoverDat <- dat %>% filter(cat == input$landCover, year == input$year, month == match(input$month, month.abb), day == input$day)
     print(nrow(landCoverDat))
-    p <- dayPlot(landCoverDat, title, "landcover")
+    p <- dayPlot(landCoverDat, title, degree = deg, datType = "landcover")
   }
   
   return(p)

@@ -8,11 +8,6 @@ ui <- fluidPage(
   
   titlePanel("Dane County Urban Heat Island Exploration"),
   h4("Observe temperature patterns by site or land cover."),
-  leafletOutput("map", height = 350) #%>%
-    # withSpinner(type = 3,
-    #             color.background = "white"), 
-  ,
-  hr(),
   wellPanel(
     fluidRow(
       column(6,
@@ -23,8 +18,11 @@ ui <- fluidPage(
              uiOutput("addSelectionUI")),
       column(6,
              uiOutput("filterTimeUI"))
-      )),
-  br(),
-  br(),
+    )),
+  leafletOutput("map", height = 350) %>%
+    withSpinner(type = 3,
+                color.background = "white"),
+  hr(),
+  radioButtons("tempLabel", "Degree units display", choices = c("Celsius", "Fahrenheit"), selected = "Celsius", inline = TRUE),
   uiOutput("plotUI")
 )

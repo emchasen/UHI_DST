@@ -1,17 +1,17 @@
 #install libraries
 library(shiny)
-#library(shinyjs)
+library(shinyjs)
 library(tidyverse)
 library(sf)
 library(leaflet)
 library(plotly)
-#library(terra)
+library(terra)
 #library(lubridate)
 library(shinycssloaders)
 
 
 # load data
-sites <- readxl::read_excel("data/WSC_Station_locations-06-03-2024.xlsx", sheet = 2) %>%
+sites <- readxl::read_excel("data/sensorAttributes.xlsx") %>%
   mutate(categoryString = case_when(is.na(category2) & is.na(category3) ~ paste(cat, category1, sep = ", "),
                                     is.na(category3) ~ paste(cat, category1, category2, sep = ", "),
                                     TRUE ~ paste(cat, category1, category2, category3, sep = ", ")))
@@ -34,8 +34,13 @@ days <- read_csv("data/days.csv")
 sites_sf <- sites %>%
   st_as_sf(coords = c("lon", "lat"), crs = 4326, remove = F) 
 
+##TODO remake raster without barren/shrubland. Probably also include more counties
 landCover <- rast("data/daneCountyLandCover.tif")
 
+CtoF <- function(x) {
+  F = (x * (9/5)) + 32
+  return(F)
+}
 
 
 # map functions--------------------
@@ -50,21 +55,23 @@ base_map <- function() {
                color = "black",
                group = "circles") %>%
     setView(lat = 43.08, lng = -89.37, zoom = 10) %>%
-    # addLayersControl(overlayGroups = "landCover",
-    #                  options = layersControlOptions(collapsed = FALSE)) %>%
-    addProviderTiles("USGS.USImageryTopo") # %>%
-    # addRasterImage(landCover, group = "landCover",
-    #                colors = c("#b50101", "#e8d1d2",  "#cb9147", "darkgreen", "skyblue1", "steelblue3", "wheat")) %>%
-    # addLegend("bottomright", pal = palCover, values = c("Urban", "Suburban", "Rural/Ag", "Forest", "Open water", "Wetland", "Barren/shrubland"),
-    #           title = "Land cover",
-    #           layerId = "landLegend",
-    #           #labFormat = labelFormat(prefix = "$"),
-    #           opacity = 1) 
+    addProviderTiles("USGS.USImageryTopo")  %>%
+    addRasterImage(landCover, group = "Land Cover",
+                   colors = c("#b50101", "#e8d1d2",  "#cb9147", "darkgreen", "skyblue1", "steelblue3", "wheat")) %>%
+    #colors = c("#b50101", "#e8d1d2",  "#cb9147", "darkgreen", "skyblue1", "steelblue3", "wheat")) %>%
+    addLegend("bottomright", pal = palCover, values = c("Urban", "Suburban", "Rural", "Forest", "Open water", "Wetland", "Barren/shrubland"),
+              #values = c("Urban", "Suburban", "Rural/Ag", "Forest", "Open water", "Wetland", "Barren/shrubland"),
+              title = "Land cover",
+              layerId = "Land Cover",
+              #labFormat = labelFormat(prefix = "$"),
+              opacity = 1) %>%
+    addLayersControl(overlayGroups = "Land Cover",
+                     options = layersControlOptions(collapsed = FALSE))
 }
 
 palSite <- colorFactor(palette = c("#cb9147", "#e8d1d2", "#b50101"), domain = sites$cat)
 palCover <- colorFactor(palette = c("#b50101", "#e8d1d2",  "#cb9147", "darkgreen", "skyblue1", "steelblue3", "wheat"),
-                        levels = c("Urban", "Suburban", "Rural/Ag", "Forest", "Open water", "Wetland", "Barren/shrubland"))
+                        levels = c("Urban", "Suburban", "Rural", "Forest", "Open water", "Wetland",  "Barren/shrubland"))
 
 layers = c(landCover = "Land cover")
 
@@ -105,41 +112,64 @@ coverData <- function(dat, cover) {
 
 # plot functions--------------
 
-yearPlot <- function(dat, title) {
+yearPlot <- function(dat, title, degree) {
   
-  dat <- dat %>%
-    mutate(monthName = month.abb[month],
-           tempC = round(tempC, 1)) 
+  if(degree == "Celsius") {
+    dat <- dat %>%
+      mutate(monthName = month.abb[month],
+             temp = round(tempC, 1))
+    yTitle = paste0("Mean temp (°C)")
+  } else if(degree == "Fahrenheit") {
+    dat <- dat %>%
+      mutate(monthName = month.abb[month],
+             temp = round(CtoF(tempC), 1))
+    yTitle = paste0("Mean temp (°F)")
+  }
+  
   
   dat$monthName = fct_relevel(dat$monthName, "Jan", "Feb", "Mar", "Apr", "May",
                               "Jun", "Jul", "Aug", "Sep", "Oct",
                               "Nov", "Dec")
   
-  # p <- plotly(data = dat, aes(x = monthName, y = tempC)) +
-  #   geom_boxplot(fill="slateblue", alpha=0.5) +
-  #   xlab("Month") +
-  #   ylab("Temp (C)") +
-  #   ggtitle(title) +
-  #   theme(text = element_text(size = 18))
+   
+  
+  
+  
   p <- plot_ly(data = dat) %>%
-    add_trace(y = ~tempC, x = ~monthName, type = "box",
+    add_trace(y = ~temp, x = ~monthName, type = "box",
               color=I("slateblue")) %>%
     layout(title = list(text = title, font = list(size = 20), y = 0.95),
            xaxis = list(title = list(text = "Month", font = list(size = 20))),
-           yaxis = list(title = list(text = "Mean temp (C)", font = list(size = 20))))
+           yaxis = list(title = list(text = yTitle, font = list(size = 20))))
     
   
   return(p)
   
 }
 
-monthPlot <- function(dat, title) {
+monthPlot <- function(dat, title, degree) {
   
-  dat <- dat %>%
-    group_by(day) %>%
-    summarise(meanTemp = mean(tempC, na.rm = TRUE),
-              minTemp = min(tempC, na.rm = TRUE),
-              maxTemp = max(tempC, na.rm = TRUE))
+  if(degree == "Celsius") {
+
+    dat <- dat %>%
+      group_by(day) %>%
+      summarise(meanTemp = mean(tempC, na.rm = TRUE),
+                minTemp = min(tempC, na.rm = TRUE),
+                maxTemp = max(tempC, na.rm = TRUE))
+    
+    yTitle = "Mean temp (min and max) (°C)"
+    
+  } else if(degree == "Fahrenheit") {
+    
+    dat <- dat %>%
+      group_by(day) %>%
+      summarise(meanTemp = mean(CtoF(tempC), na.rm = TRUE),
+                minTemp = min(CtoF(tempC), na.rm = TRUE),
+                maxTemp = max(CtoF(tempC), na.rm = TRUE))
+    
+    yTitle = "Mean temp (min and max) (°F)"
+  }
+  
   
   p <- plot_ly(data = dat, x = ~day) %>%
     add_trace(y =~meanTemp, type = 'scatter', mode = 'lines+markers', 
@@ -154,39 +184,51 @@ monthPlot <- function(dat, title) {
                               color = '#000000')) %>%
     layout(title = list(text = title, font = list(size = 20), y = 0.95),
            xaxis = list(title = list(text = "Day of month", font = list(size = 20))),
-           yaxis = list(title = list(text = "Mean temp (C)", font = list(size = 20))))
+           yaxis = list(title = list(text = yTitle, font = list(size = 20))))
   
   return(p)
   
 }
 
-dayPlot <- function(dat, title, datType) {
+dayPlot <- function(dat, title, degree, datType) {
+  
+  dat$Time <- substr(as.POSIXct(sprintf("%04.0f", dat$Time1), format='%H%M'), 12, 16)
+  
+  if(degree == "Celsius") {
+    
+    dat <- dat %>%
+      mutate(temp = tempC)
+    
+    yTitle = "Temp (°C)"
+    
+  } else if(degree == "Fahrenheit") {
+    
+    dat <- dat %>%
+      mutate(temp = CtoF(tempC))
+    
+    yTitle = "Temp (°F)"
+  }
   
   if(datType == "site") {
     p <- plot_ly(data = dat) %>%
-      add_trace(x = ~Time1, y = ~tempC, type = 'scatter', mode = 'lines+markers',
+      add_trace(x = ~Time, y = ~temp, type = 'scatter', mode = 'lines+markers',
                 line = list(color = "#000000"),
                 marker = list(color = "#000000")) %>%
       layout(title = list(text = title, font = list(size = 20), y = 0.95),
              xaxis = list(title = list(text = "Time of day", font = list(size = 20))),
-             yaxis = list(title = list(text = "Temp (C)", font = list(size = 20))))
+             yaxis = list(title = list(text = yTitle, font = list(size = 20))))
     
   } else if(datType == "landcover") { 
     
-    print("inside land cover day plot")
-
-  
     dat <- dat %>%
-      group_by(Time1) %>%
-      summarise(meanTemp = mean(tempC, na.rm = TRUE),
-                sdTemp = sd(tempC, na.rm = TRUE),
+      group_by(Time) %>%
+      summarise(meanTemp = mean(temp, na.rm = TRUE),
+                sdTemp = sd(temp, na.rm = TRUE),
                 count = n(),
                 seTemp = sdTemp/sqrt(count))
     
-    print(summary(dat))
-    
     p <- plot_ly(data = dat) %>%
-      add_trace(x = ~Time1, y = ~meanTemp, 
+      add_trace(x = ~Time, y = ~meanTemp, 
                 type = 'scatter', mode = 'lines+markers',
                 line = list(color = "#000000"),
                 marker = list(color = "#000000"),
@@ -196,7 +238,7 @@ dayPlot <- function(dat, title, datType) {
                                 color = '#000000')) %>%
       layout(title = list(text = title, font = list(size = 20), y = 0.95),
              xaxis = list(title = list(text = "Time of day", font = list(size = 20))),
-             yaxis = list(title = list(text = "Mean temp (C) +/- se", font = list(size = 20))))
+             yaxis = list(title = list(text = paste(yTitle, "+/- se"), font = list(size = 20))))
       
   }
   
