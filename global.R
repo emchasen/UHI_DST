@@ -16,11 +16,11 @@ sites <- readxl::read_excel("data/sensorAttributes.xlsx") %>%
                                     is.na(category3) ~ paste(cat, category1, category2, sep = ", "),
                                     TRUE ~ paste(cat, category1, category2, category3, sep = ", ")))
 
-dat <- read_csv("data/partialDataLongDate.csv.gz") %>%
-  left_join(sites)
-
-# dat <- read_csv("data/sampleDat.csv.gz") %>%
+# dat <- read_csv("data/partialDataLongDate.csv.gz") %>%
 #   left_join(sites)
+
+dat <- read_csv("data/sampleDat.csv.gz") %>%
+  left_join(sites)
 
 days <- read_csv("data/days.csv")
 

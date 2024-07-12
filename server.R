@@ -41,7 +41,7 @@ server <- function(input, output, session) {
                             fillOpacity = 0.6,
                             popup = ~categoryString)  %>%
           addLegend("topleft", pal = palSite, values = sites$cat,
-                    title = "Land cover",
+                    title = "Site land cover",
                     layerId = "landLegend",
                     opacity = 1)
        
@@ -136,6 +136,49 @@ server <- function(input, output, session) {
     
   })
   
+  #addSelectionUI------------------
+  output$addSelectionUI <- renderUI({
+    
+    req(input$year)
+    wellPanel(
+      tagList(
+        fluidRow(
+          column(6,
+                 checkboxInput(inputId = "addSelect", label = "Compare additional location(s)", value = FALSE)),
+          column(6,
+                 uiOutput("filterSpace2UI"),
+                 uiOutput("siteSelect2UI"),
+                 uiOutput("landCoverSelect2UI"))
+        )
+      )
+    )
+    
+  })
+  
+  output$filterSpace2UI <- renderUI({
+    
+    req(input$addSelect)
+    selectInput(inputId = "filterSpace2", label = "Filter comparison data by:", choices = c(" ", "Site", "Land cover"), selected = " ")
+    
+  })
+  
+  output$siteSelect2UI <- renderUI({
+
+    req(input$filterSpace2 == "Site")
+    tagList(
+      h5("Find second site on the map and click the site marker"),
+      #uiOutput("siteID2")
+    )
+  })
+
+  output$landCoverSelect2UI <- renderUI({
+
+    req(input$filterSpace2 == "Land cover")
+    tagList(
+      selectInput(inputId = "landCover2", label = "Select comparison land cover", choices = c(" ", "Rural", "Suburban", "Urban"))
+    )
+  })
+  
   # timeSelectUI-------------
   output$timeSelectUI <- renderUI({
     
@@ -172,7 +215,7 @@ server <- function(input, output, session) {
       monthChoices <- month.abb[sort(unique(monthChoices$month))]
     } else {
       if(input$year == 2012) {
-        monthChoices <- month.abb[3:12] ##TODO check if it should be march (3) or april
+        monthChoices <- month.abb[3:12] 
       } else{
         monthChoices <- month.abb[1:12]
       }
@@ -220,12 +263,7 @@ server <- function(input, output, session) {
    
   })
   
-    output$addSelectionUI <- renderUI({
-      
-      req(input$year)
-      wellPanel(checkboxInput(inputId = "addSelect", label = "Compare additional location(s)", value = FALSE))
-  
-    })
+ 
   
 
 output$yearFig <- renderPlotly({

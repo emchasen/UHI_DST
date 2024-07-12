@@ -13,9 +13,7 @@ ui <- fluidPage(
       column(6,
              selectInput(inputId = "filterSpace", label = "Filter data spatially by:", choices = c(" ", "Site", "Land cover"), selected = " "),
              uiOutput("siteSelectUI"),
-             uiOutput("landCoverSelectUI"),
-             br(),
-             uiOutput("addSelectionUI")),
+             uiOutput("landCoverSelectUI")),
       column(6,
              uiOutput("filterTimeUI"))
     )),
@@ -23,6 +21,11 @@ ui <- fluidPage(
     withSpinner(type = 3,
                 color.background = "white"),
   hr(),
-  radioButtons("tempLabel", "Degree units display", choices = c("Celsius", "Fahrenheit"), selected = "Celsius", inline = TRUE),
+  fluidRow(
+    column(3,
+           radioButtons("tempLabel", "Degree units display", choices = c("Celsius", "Fahrenheit"), selected = "Celsius", inline = TRUE)),
+    column(9,
+           uiOutput("addSelectionUI"))
+  ),
   uiOutput("plotUI")
 )
