@@ -17,15 +17,20 @@ ui <- fluidPage(
       column(6,
              uiOutput("filterTimeUI"))
     )),
-  leafletOutput("map", height = 350) %>%
-    withSpinner(type = 3,
-                color.background = "white"),
-  hr(),
   fluidRow(
-    column(3,
-           radioButtons("tempLabel", "Degree units display", choices = c("Celsius", "Fahrenheit"), selected = "Celsius", inline = TRUE)),
-    column(9,
+    column(8,
+           leafletOutput("map", height = 350) %>%
+             withSpinner(type = 3,
+                         color.background = "white")),
+    column(4, 
            uiOutput("addSelectionUI"))
   ),
+  hr(),
+  #fluidRow(
+   # column(3,
+           #radioButtons("tempLabel", "Degree units display", choices = c("Celsius", "Fahrenheit"), selected = "Celsius", inline = TRUE),
+    #column(9,
+     #      )
+  #),
   uiOutput("plotUI")
 )

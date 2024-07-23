@@ -16,11 +16,11 @@ sites <- readxl::read_excel("data/sensorAttributes.xlsx") %>%
                                     is.na(category3) ~ paste(cat, category1, category2, sep = ", "),
                                     TRUE ~ paste(cat, category1, category2, category3, sep = ", ")))
 
-# dat <- read_csv("data/partialDataLongDate.csv.gz") %>%
-#   left_join(sites)
-
-dat <- read_csv("data/sampleDat.csv.gz") %>%
+dat <- read_csv("data/partialDataLongDate.csv.gz") %>%
   left_join(sites)
+
+# dat <- read_csv("data/sampleDat.csv.gz") %>%
+#   left_join(sites)
 
 days <- read_csv("data/days.csv")
 
@@ -53,7 +53,7 @@ base_map <- function() {
                lng = ~lon, lat = ~lat,
                opacity = 0.7,
                color = "black",
-               group = "circles") %>%
+               group = "Sites") %>%
     setView(lat = 43.08, lng = -89.37, zoom = 10) %>%
     addProviderTiles("USGS.USImageryTopo")  %>%
     addRasterImage(landCover, group = "Land Cover",
@@ -65,7 +65,7 @@ base_map <- function() {
               layerId = "Land Cover",
               #labFormat = labelFormat(prefix = "$"),
               opacity = 1) %>%
-    addLayersControl(overlayGroups = "Land Cover",
+    addLayersControl(overlayGroups = c("Land Cover", "Sites"),
                      options = layersControlOptions(collapsed = FALSE))
 }
 
@@ -75,19 +75,36 @@ palCover <- colorFactor(palette = c("#b50101", "#e8d1d2",  "#cb9147", "darkgreen
 
 layers = c(landCover = "Land cover")
 
-# filter data----------------
+# create data frames----------------
 
 siteData <- function(dat, site) {
   newDat <- dat %>%
     filter(sid == site)
   return(newDat)
-} 
-
-siteYearData <- function(dat, yearSelect) {
-  newDat <- dat %>%
-    filter(year == yearSelect)
-  return(newDat)
 }
+
+createSiteYearData <- function(siteType, dat, yearSelect, landLabel) {
+  
+  # filter data and configure months
+  if(siteType == "Site") {
+    filteredDat <- dat %>% filter(sid == landLabel,
+                          year == yearSelect) %>%
+      mutate(monthName = month.abb[month])
+    filteredDat$monthName = fct_relevel(filteredDat$monthName, "Jan", "Feb", "Mar", "Apr", "May",
+                                 "Jun", "Jul", "Aug", "Sep", "Oct",
+                                 "Nov", "Dec")
+    return(filteredDat)
+  } else if(siteType == "Land cover") {
+    filteredDat <- dat %>% filter(cat == landLabel,
+                          year == yearSelect) %>%
+      mutate(monthName = month.abb[month])
+    filteredDat$monthName = fct_relevel(filteredDat$monthName, "Jan", "Feb", "Mar", "Apr", "May",
+                                "Jun", "Jul", "Aug", "Sep", "Oct",
+                                "Nov", "Dec")
+    return(filteredDat)
+  }
+}
+
 
 siteMonthData <- function(dat, yearSelect, monthSelect) {
   newDat <- dat %>%
@@ -112,40 +129,39 @@ coverData <- function(dat, cover) {
 
 # plot functions--------------
 
-yearPlot <- function(dat, title, degree) {
+yearPlotSingle <- function(dat1, title, landLabel, yLabel) {
   
-  if(degree == "Celsius") {
-    dat <- dat %>%
-      mutate(monthName = month.abb[month],
-             temp = round(tempC, 1))
-    yTitle = paste0("Mean temp (°C)")
-  } else if(degree == "Fahrenheit") {
-    dat <- dat %>%
-      mutate(monthName = month.abb[month],
-             temp = round(CtoF(tempC), 1))
-    yTitle = paste0("Mean temp (°F)")
-  }
-  
-  
-  dat$monthName = fct_relevel(dat$monthName, "Jan", "Feb", "Mar", "Apr", "May",
-                              "Jun", "Jul", "Aug", "Sep", "Oct",
-                              "Nov", "Dec")
-  
-   
-  
-  
-  
-  p <- plot_ly(data = dat) %>%
+  p <- plot_ly(data = dat1) %>%
     add_trace(y = ~temp, x = ~monthName, type = "box",
-              color=I("slateblue")) %>%
+              color=I("slateblue"), name = landLabel) %>%
     layout(title = list(text = title, font = list(size = 20), y = 0.95),
            xaxis = list(title = list(text = "Month", font = list(size = 20))),
-           yaxis = list(title = list(text = yTitle, font = list(size = 20))))
-    
+           yaxis = list(title = list(text = yLabel, font = list(size = 20))))
   
   return(p)
   
 }
+
+completeYearPlot <- function(dat1, dat2 = NULL, title, landLabel1, landLabel2, yLabel, compare) {
+  
+  base_plot <- yearPlotSingle(dat1 = dat1, title = title, landLabel = landLabel1, yLabel = yLabel)
+  
+  if(compare == FALSE) {
+    plt <- base_plot
+  } else if(compare == TRUE) {
+    plt <- base_plot %>%
+      add_trace(data = dat2, y = ~ temp, x = ~ monthName, 
+                type = "box", name = landLabel2) %>%
+      layout(boxmode = "group",
+             title = list(text = title, font = list(size = 20), y = 0.95)) 
+  }
+  
+  return(plt)
+  
+}
+
+
+
 
 monthPlot <- function(dat, title, degree) {
   
