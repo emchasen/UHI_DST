@@ -79,8 +79,8 @@ server <- function(input, output, session) {
     if(!isTruthy(input$addSelect)) {
       click <- input$map_marker_click
       sid(click$id)
-      print("first click")
-      print(sid())
+      #print("first click")
+      #print(sid())
       
       #return sidData
       sidDF <- siteData(dat, site = click$id)
@@ -132,12 +132,16 @@ server <- function(input, output, session) {
   #addSelectionUI------------------
   output$addSelectionUI <- renderUI({
     
-    req(input$tempLabel)
+    req(isTruthy(input$year),
+        isTruthy(sidData()) || isTruthy(input$landCover)
+    )
+    
     wellPanel(
       tagList(
         fluidRow(
           column(6,
-                 checkboxInput(inputId = "addSelect", label = "Compare additional location(s)", value = FALSE)),
+                 checkboxInput(inputId = "addSelect", label = "Compare additional location(s)", value = FALSE),
+                 actionButton(inputId = "clear", label = "Clear selection(s)")),
           column(6,
                  uiOutput("filterSpace2UI"),
                  uiOutput("siteSelect2UI"),
@@ -168,6 +172,8 @@ server <- function(input, output, session) {
   observeEvent(input$filterSpace2, {
     
     if(input$filterSpace2 == "Site") {
+      ##TODO can't change from land cover selection back to site (after land cover has been selected and graph made)
+      ##TODO vice versa. Is this because dat2?
       
       leafletProxy("map") %>%
         addCircleMarkers(data = sites_sf,
@@ -186,8 +192,8 @@ server <- function(input, output, session) {
         
         click2 <- input$map_marker_click
         sid2(click2$id)
-        print("second click")
-        print(sid2())
+        #print("second click")
+        #print(sid2())
         
       })
       
@@ -207,8 +213,6 @@ server <- function(input, output, session) {
     }
     
   })
-  
-  
 
   output$landCoverSelect2UI <- renderUI({
 
@@ -220,6 +224,7 @@ server <- function(input, output, session) {
       selectInput(inputId = "landCover2", label = "Select comparison land cover", choices = newChoices)
     )
   })
+  
   
   # timeSelectUI-------------
   output$timeSelectUI <- renderUI({
@@ -253,7 +258,7 @@ server <- function(input, output, session) {
     req(input$year)
     req(input$filterTime == "Month" || input$filterTime == "Day")
     if(spaceFilter() == "site") {
-      monthChoices <- siteYearData(sidData(), input$year)
+      monthChoices <- sidData() %>% filter(year == input$year)
       monthChoices <- month.abb[sort(unique(monthChoices$month))]
     } else {
       if(input$year == 2012) {
@@ -262,7 +267,7 @@ server <- function(input, output, session) {
         monthChoices <- month.abb[1:12]
       }
     }
-    print(monthChoices)
+    #print(monthChoices)
     selectInput(inputId = "month", label = "Select month", choices = c("", monthChoices))
   
   })
@@ -289,12 +294,18 @@ server <- function(input, output, session) {
   })
   
   # create data-----------------
-  ##dat1---------------
-  dat1 <- reactive({
+  rv <- reactiveValues(
+    
+    dat1 = NULL,
+    dat2 = NULL
+    
+  )
+  
+  ## dat1---------------
+  observe({
     
     req(input$filterSpace)
     req(input$year)
-    
     
     if(input$filterSpace == "Site") {
       landLabel1 = sid()
@@ -302,55 +313,79 @@ server <- function(input, output, session) {
       landLabel1 = input$landCover
     }
     
+    if(input$filterTime == "Year") {
+      print("creating year dat1")
+      rv$dat1 <- createSiteYearData(siteType = input$filterSpace, dat = dat, yearSelect = input$year, landLabel = landLabel1)
+    } else if(input$filterTime == "Month") {
+      req(input$month)
+      print("creating month dat1")
+      month = which(input$month == month.abb)[[1]]
+      rv$dat1 <- createSiteMonthData(siteType = input$filterSpace, dat = dat, yearSelect = input$year, monthSelect = month, landLabel = landLabel1)
+    } else if(input$filterTime == "Day") {
+      req(input$day)
+      print("creating day dat1")
+      month = which(input$month == month.abb)[[1]]
+      rv$dat1 <- createSiteDayData(siteType = input$filterSpace, dat = dat, yearSelect = input$year, monthSelect = month, daySelect = input$day, landLabel = landLabel1)
+    }
     
-    d1 <- createSiteYearData(siteType = input$filterSpace, dat = dat, yearSelect = input$year, landLabel = landLabel1)
-    
-    #print(head(d1))
-    return(d1)
-    
-  })
+    print(head(rv$dat1))
 
+  })
   
   ##dat2-----------------
-  dat2 <- reactive({
   
-    req(
-      isTruthy(sid2()) || isTruthy(cover2())
-    )
+  observe({
     
-    ##TODO needs to start creating after filterSpace is selected
-    
-    print("creating dat2")
-    print(sid2())
-    print(cover2())
-    
-    if(input$filterSpace2 == "Site") {
-      landLabel2 <- sid2()
-    } else if(input$filterSpace2 == "Land cover") {
-      landLabel2 <- cover2()
-    }
+      req(
+        isTruthy(sid2()) || isTruthy(cover2())
+      )
+      req(input$filterSpace2)
+      req(input$year)
 
-    d2 <- createSiteYearData(siteType = input$filterSpace2, dat = dat, yearSelect = input$year, landLabel = landLabel2)
-    #print(head(d2))
-    return(d2)
-    
+      print(input$filterSpace2)
+      if(input$filterSpace2 == "Site") {
+        landLabel2 <- sid2()
+      } else if(input$filterSpace2 == "Land cover") {
+        landLabel2 <- cover2()
+      }
+      
+      if(input$filterTime == "Year") {
+        print("creating year dat2")
+        rv$dat2 <- createSiteYearData(siteType = input$filterSpace2, dat = dat, yearSelect = input$year, landLabel = landLabel2)
+      } else if(input$filterTime == "Month") {
+        req(input$month)
+        print("creating month dat2")
+        month = which(input$month == month.abb)[[1]]
+        rv$dat2 <- createSiteMonthData(siteType = input$filterSpace2, dat = dat, yearSelect = input$year, monthSelect = month, landLabel = landLabel2)
+      } else if(input$filterTime == "Day") {
+        req(input$day)
+        print("creating day dat2")
+        month = which(input$month == month.abb)[[1]]
+        rv$dat2 <- createSiteDayData(siteType = input$filterSpace2, dat = dat, yearSelect = input$year, monthSelect = month, daySelect = input$day, landLabel = landLabel2)
+      }
   })
+ 
   
   #plotUI---------------------------
+  
   output$plotUI <- renderUI({
     
-    req(isTruthy(input$year),
-      isTruthy(sidData()) || isTruthy(input$landCover)
-    )
+    # req(isTruthy(input$year),
+    #   isTruthy(sidData()) || isTruthy(input$landCover)
+    # )
+    req(rv$dat1)
     
     tagList(
       radioButtons("tempLabel", "Degree units display", choices = c("Celsius", "Fahrenheit"), selected = "Celsius", inline = TRUE),
       if(input$filterTime == "Year") {
-        withSpinner(plotlyOutput("yearFig"), type = 8)
+        uiOutput("yearFig")
+        #withSpinner(plotlyOutput("yearFig"), type = 8)
       } else if(input$filterTime == "Month") {
-        withSpinner(plotlyOutput("monthFig"), type = 8)
-      } else {
-        withSpinner(plotlyOutput("dayFig"), type = 8)
+        #withSpinner(plotlyOutput("monthFig"), type = 8)
+        uiOutput("monthFig")
+      } else if(input$filterTime == "Day") {
+        #withSpinner(plotlyOutput("dayFig"), type = 8)
+        uiOutput("dayFigure")
       }
     )
     
@@ -358,99 +393,296 @@ server <- function(input, output, session) {
   })
   
 
-
-  ### year plot---------
+  ### year plot ---------
+  output$yearFig <- renderUI({
+    
+    req(input$filterTime == "Year")
+    
+    if(isTruthy(sid2()) || isTruthy(cover2())) {
+      withSpinner(plotlyOutput("compareDatYearFig"), type = 8)
+    } else {
+      withSpinner(plotlyOutput("singleDatYearFig"), type = 8)
+    }
+    
+  })
   
-  output$yearFig <- renderPlotly({
+  output$singleDatYearFig <- renderPlotly({
   
-  req(dat1())
-  req(input$filterTime == "Year")
-  req(input$year)
-  deg = input$tempLabel 
+    print("singleDatYearFig")
+    dat1df <- req(rv$dat1)
+    req(input$year)
+    deg <- req(input$tempLabel) 
+    #print(head(dat1df))
+ 
   
-  dat1df <- dat1()
-  
-  if(deg == "Celsius") {
-    convertDat1 <- dat1df %>%
-      mutate(temp = round(tempC,1))
-    yLabel = "Mean temp (°C)"
-  } else if(deg == "Fahrenheit") {
-    yLabel = "Mean temp (°F)"
-    convertDat1 <- dat1df %>%
-      mutate(temp = round(CtoF(tempC),1))
-  }
-  
-  if(input$filterSpace == "Site") {
-    title = paste("Temperatures at ", sid(), " in ", input$year)
-    landLabel1 = sid() ##TODO this can only be created at first map click
-  } else if(input$filterSpace == "Land cover") {
-    title = paste("Temperatures in", input$landCover, "areas in", input$year)
-    landLabel1 = input$landCover
-  }
-  
-  if(isTruthy(sid2()) || isTruthy(cover2())) {
-    print("moving to compare plot")
-    dat2df <- dat2()
     if(deg == "Celsius") {
-      convertDat2 <- dat2df %>%
+      convertDat1 <- dat1df %>%
         mutate(temp = round(tempC,1))
+      yLabel = "Mean temp (°C)"
     } else if(deg == "Fahrenheit") {
-      convertDat2 <- dat2df %>%
+      yLabel = "Mean temp (°F)"
+      convertDat1 <- dat1df %>%
         mutate(temp = round(CtoF(tempC),1))
     }
+    #print(head(convertDat1))
+  
+    if(input$filterSpace == "Site") {
+      title = paste("Temperatures at", sid(), "in", input$year)
+      landLabel1 = sid() 
+    } else if(input$filterSpace == "Land cover") {
+      title = paste("Temperatures in", input$landCover, "areas in", input$year)
+      landLabel1 = input$landCover
+    }
+  
+    completeYearPlot(dat1 = convertDat1, title = title, landLabel1 = landLabel1, yLabel = yLabel, compare = FALSE)
+  
+  })
+  
+  output$compareDatYearFig <- renderPlotly({
+    
+    print("compareYearFig")
+    req(input$year)
+    dat1df <- req(rv$dat1)
+    dat2df <- req(rv$dat2)
+    deg <- req(input$tempLabel) 
+    
+    if(deg == "Celsius") {
+      convertDat1 <- dat1df %>%
+        mutate(temp = round(tempC,1))
+      convertDat2 <- dat2df %>%
+        mutate(temp = round(tempC,1))
+      yLabel = "Mean temp (°C)"
+    } else if(deg == "Fahrenheit") {
+      convertDat1 <- dat1df %>%
+        mutate(temp = round(CtoF(tempC),1))
+      convertDat2 <- dat2df %>%
+        mutate(temp = round(CtoF(tempC),1))
+      yLabel = "Mean temp (°F)"
+    }
+    print(head(convertDat1))
+    print(head(convertDat2))
+    
+    if(input$filterSpace == "Site") {
+      landLabel1 = sid() 
+    } else if(input$filterSpace == "Land cover") {
+      landLabel1 = input$landCover
+    }
+    print("landLabel1")
+    print(landLabel1)
     
     if(input$filterSpace2 == "Site") {
-      landLabel2 <- sid2()
+      landLabel2 = sid2() 
     } else if(input$filterSpace2 == "Land cover") {
-      landLabel2 <- input$landCover2
+      landLabel2 = input$landCover2
     }
+    print("landLabel2")
+    print(landLabel2)
     
     title = paste("Temperatures in", input$year)
-    print("dat1")
-    print(head(convertDat1))
-    print(landLabel1)
-    print("dat2")
-    print(head(convertDat2))
-    print(landLabel2)
-    p <- completeYearPlot(dat1 = convertDat1, dat2 = convertDat2, title = title, 
-                          landLabel1 = landLabel1, landLabel2 = landLabel2, yLabel = yLabel, compare = TRUE)
-  } else {
-    print("single plot")
-    print(head(convertDat1))
-    print(landLabel1)
-    p <- completeYearPlot(dat1 = convertDat1, title = title, landLabel1 = landLabel1, yLabel = yLabel, compare = FALSE)
-  }
- 
-  return(p)
+    
+    completeYearPlot(dat1 = convertDat1, dat2 = convertDat2, title = title, 
+                     landLabel1 = landLabel1, landLabel2 = landLabel2, yLabel = yLabel, compare = TRUE)
+    
+  })
   
-})
+  ### month plot ---------
+  output$monthFig <- renderUI({
+    
+    req(input$filterTime == "Month")
+    
+    if(isTruthy(sid2()) || isTruthy(cover2())) {
+      withSpinner(plotlyOutput("compareDatMonthFig"), type = 8)
+    } else {
+      withSpinner(plotlyOutput("singleDatMonthFig"), type = 8)
+    }
+    
+  })
   
+  output$singleDatMonthFig <- renderPlotly({
+    
+    dat1df <- req(rv$dat1)
+    req(input$year)
+    deg <- req(input$tempLabel) 
+    #print(head(dat1df))
+    
+    if(deg == "Celsius") {
+      convertDat1 <- dat1df 
+      yLabel = "Mean temp (°C)"
+    } else if(deg == "Fahrenheit") {
+      yLabel = "Mean temp (°F)"
+      convertDat1 <- dat1df %>%
+        mutate(meanTemp = round(CtoF(meanTemp),2),
+               minTemp = round(CtoF(minTemp), 2),
+               maxTemp = round(CtoF(maxTemp), 2))
+    }
+    
+    if(input$filterSpace == "Site") {
+      title = paste0("Temperatures at ", sid(), " in ", input$month, ", ", input$year)
+      landLabel1 = sid() 
+    } else if(input$filterSpace == "Land cover") {
+      title = paste0("Temperatures in ", input$landCover, " areas in ", input$month, ", ", input$year)
+      landLabel1 = input$landCover
+    }
+    
+    completeMonthPlot(dat1 = convertDat1, title = title, landLabel1 = landLabel1, yLabel = yLabel, compare = FALSE)
+    
+  })
+  
+  output$compareDatMonthFig <- renderPlotly({
 
-output$monthFig <- renderPlotly({
+    dat1df <- req(rv$dat1)
+    dat2df <- req(rv$dat2)
+    deg <- req(input$tempLabel)
+
+    if(deg == "Celsius") {
+      convertDat1 <- dat1df 
+      convertDat2 <- dat2df 
+      yLabel = "Mean temp (°C)"
+    } else if(deg == "Fahrenheit") {
+      convertDat1 <- dat1df %>%
+        mutate(meanTemp = round(CtoF(meanTemp),2),
+               minTemp = round(CtoF(minTemp), 2),
+               maxTemp = round(CtoF(maxTemp), 2))
+      convertDat2 <- dat2df %>%
+        mutate(meanTemp = round(CtoF(meanTemp),2),
+               minTemp = round(CtoF(minTemp), 2),
+               maxTemp = round(CtoF(maxTemp), 2))
+      yLabel = "Mean temp (°F)"
+    }
+    # print(head(convertDat1))
+    # print(head(convertDat2))
+
+    if(input$filterSpace == "Site") {
+      landLabel1 = sid()
+    } else if(input$filterSpace == "Land cover") {
+      landLabel1 = input$landCover
+    }
+
+    if(input$filterSpace2 == "Site") {
+      landLabel2 = sid2()
+    } else if(input$filterSpace2 == "Land cover") {
+      landLabel2 = input$landCover2
+    }
+
+    title = paste0("Temperatures in ", input$month, ", ", input$year)
+
+    completeMonthPlot(dat1 = convertDat1, dat2 = convertDat2, title = title,
+                     landLabel1 = landLabel1, landLabel2 = landLabel2, yLabel = yLabel, compare = TRUE)
+
+  })
   
-  req(input$filterTime == "Month")
-  req(input$month)
-  deg = input$tempLabel
+  ### day plot ---------
+  output$dayFigure <- renderUI({
+    
+    req(input$filterTime == "Day")
+    
+    if(isTruthy(sid2()) || isTruthy(cover2())) {
+      withSpinner(plotlyOutput("compareDatDayFig"), type = 8)
+    } else {
+      withSpinner(plotlyOutput("singleDatDayFig"), type = 8)
+    }
+    
+  })
   
-  if(spaceFilter() == "site") {
-    #print("inside site month plot")
-    #print(head(sidData()))
-    sidDat <- siteMonthData(sidData(), yearSelect = input$year, monthSelect = match(input$month, month.abb))
-    # sidDat <- sidDat %>% mutate_if(is.character, as.factor)
-    # print(summary(sidDat))
-    title <- paste("Temperatures at", sid(), "in", input$month, input$year)
-    #print(title)
-    p <- monthPlot(sidDat, title, degree = deg)
-  } else {
-    title <- paste("Temperatures in", input$landCover, "areas in", input$month, input$year)
-    landCoverDat <- dat %>% filter(cat == input$landCover, year == input$year, month == match(input$month, month.abb))
-    print(head(landCoverDat))
-    p <- monthPlot(landCoverDat, title, degree = deg)
-  }
+  output$singleDatDayFig <- renderPlotly({
+    
+    dat1df <- req(rv$dat1)
+    deg <- req(input$tempLabel) 
+    
+    if(deg == "Celsius") {
+      convertDat1 <- dat1df 
+      yLabel = "Mean temp (°C)"
+    } else if(deg == "Fahrenheit") {
+      yLabel = "Mean temp (°F)"
+      ##TODO how should I handle the se? I can't convert it with CtoF
+      convertDat1 <- dat1df %>%
+        mutate(meanTemp = round(CtoF(meanTemp),2))
+    }
+    print(head(convertDat1))
+    
+    if(input$filterSpace == "Site") {
+      title = paste0("Temperatures at ", sid(), " on ", input$month, " ", input$day,", ", input$year)
+      landLabel1 = sid() 
+    } else if(input$filterSpace == "Land cover") {
+      title = paste0("Temperatures in ", input$landCover, " areas on ", input$day, " ", input$month, ", ", input$year)
+      landLabel1 = input$landCover
+    }
+    
+    completeDayPlot(dat1 = convertDat1, datType1 = input$filterSpace, title = title, landLabel1 = landLabel1, yLabel = yLabel, compare = FALSE)
+    
+  })
   
-  return(p)
+  output$compareDatDayFig <- renderPlotly({
+    
+    print("compareDayFig")
+    dat1df <- req(rv$dat1)
+    dat2df <- req(rv$dat2)
+    deg <- req(input$tempLabel)
   
-})
+    if(deg == "Celsius") {
+      convertDat1 <- dat1df 
+      convertDat2 <- dat2df 
+      yLabel = "Mean temp (°C)"
+    } else if(deg == "Fahrenheit") {
+      ##TODO how should I handle the se? I can't convert it with CtoF
+      convertDat1 <- dat1df %>%
+        mutate(meanTemp = round(CtoF(meanTemp),2))
+      convertDat2 <- dat2df %>%
+        mutate(meanTemp = round(CtoF(meanTemp),2))
+      yLabel = "Mean temp (°F)"
+    }
+    print(head(convertDat1))
+    print(head(convertDat2))
+    
+    if(input$filterSpace == "Site") {
+      landLabel1 = sid()
+    } else if(input$filterSpace == "Land cover") {
+      landLabel1 = input$landCover
+    }
+    print("landLabel1")
+    print(landLabel1)
+    
+    if(input$filterSpace2 == "Site") {
+      landLabel2 = sid2()
+    } else if(input$filterSpace2 == "Land cover") {
+      landLabel2 = input$landCover2
+    }
+    print("landLabel2")
+    print(landLabel2)
+    
+    title = paste0("Temperatures on ", input$month, " ", input$day, ", ", input$year)
+    
+    completeDayPlot(dat1 = convertDat1, dat2 = convertDat2, datType1 = input$filterSpace, datType2 = input$filterSpace2,
+                    title = title, landLabel1 = landLabel1, landLabel2 = landLabel2, yLabel = yLabel, compare = TRUE)
+    
+  })
+
+
+# output$monthFig <- renderPlotly({
+#   
+#   req(input$filterTime == "Month")
+#   req(input$month)
+#   deg = input$tempLabel
+#   
+#   if(spaceFilter() == "site") {
+#     #print("inside site month plot")
+#     #print(head(sidData()))
+#     sidDat <- siteMonthData(sidData(), yearSelect = input$year, monthSelect = match(input$month, month.abb))
+#     # sidDat <- sidDat %>% mutate_if(is.character, as.factor)
+#     # print(summary(sidDat))
+#     title <- paste("Temperatures at", sid(), "in", input$month, input$year)
+#     #print(title)
+#     p <- monthPlot(sidDat, title, degree = deg)
+#   } else {
+#     title <- paste("Temperatures in", input$landCover, "areas in", input$month, input$year)
+#     landCoverDat <- dat %>% filter(cat == input$landCover, year == input$year, month == match(input$month, month.abb))
+#     print(head(landCoverDat))
+#     p <- monthPlot(landCoverDat, title, degree = deg)
+#   }
+#   
+#   return(p)
+#   
+# })
 
 output$dayFig <- renderPlotly({
   
@@ -475,6 +707,15 @@ output$dayFig <- renderPlotly({
   }
   
   return(p)
+  
+})
+
+# clear--------------------
+observeEvent(input$clear, {
+  
+  rv$dat1 <- NULL
+  rv$dat2 <- NULL
+  
   
 })
 
