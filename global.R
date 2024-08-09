@@ -16,11 +16,11 @@ sites <- readxl::read_excel("data/sensorAttributes.xlsx") %>%
                                     is.na(category3) ~ paste(cat, category1, category2, sep = ", "),
                                     TRUE ~ paste(cat, category1, category2, category3, sep = ", ")))
 
-# dat <- read_csv("data/partialDataLongDate.csv.gz") %>%
-#   left_join(sites)
-
-dat <- read_csv("data/sampleDat.csv.gz") %>%
+dat <- read_csv("data/partialDataLongDate.csv.gz") %>%
   left_join(sites)
+
+# dat <- read_csv("data/sampleDat.csv.gz") %>%
+#   left_join(sites)
 
 days <- read_csv("data/days.csv")
 
@@ -96,12 +96,16 @@ createSiteYearData <- function(siteType, dat, yearSelect, landLabel) {
                                  "Nov", "Dec")
     #return(filteredDat)
   } else if(siteType == "Land cover") {
+    print("inside create Site year data")
+    print(landLabel)
+    print(yearSelect)
     filteredDat <- dat %>% filter(cat == landLabel,
                           year == yearSelect) %>%
       mutate(monthName = month.abb[month])
     filteredDat$monthName = fct_relevel(filteredDat$monthName, "Jan", "Feb", "Mar", "Apr", "May",
                                 "Jun", "Jul", "Aug", "Sep", "Oct",
                                 "Nov", "Dec")
+    print(head(filteredDat))
     #return(filteredDat)
   }
   
@@ -332,14 +336,12 @@ completeDayPlot <- function(dat1, dat2 = NULL, datType1, datType2, title, landLa
     if(nrow(dat2) > 1) {
       ##TODO handle the different datTypes
       if(datType2 == "Site") {
-        print("comparing site")
         plt <- base_plot %>%
           add_trace(data = dat2, y = ~meanTemp, x = ~Time, name = landLabel2,
                     type = 'scatter', mode = 'lines+markers',
                     hoverinfo = "text",
                     hovertext = ~ round(meanTemp, 1))
       } else if(datType2 == "Land cover") {
-        print("comparing land cover")
         plt <- base_plot %>%
           add_trace(data = dat2, y = ~meanTemp, x = ~Time, name = landLabel2,
                     type = 'scatter', mode = 'lines+markers',

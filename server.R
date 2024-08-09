@@ -50,6 +50,9 @@ server <- function(input, output, session) {
         })
        
        cover(NULL)
+       #dat1(NULL)
+        rv$dat1 <- NULL
+        rv$dat2 <- NULL
        
      } else if(input$filterSpace == "Land cover") {
        
@@ -67,6 +70,10 @@ server <- function(input, output, session) {
        
        sid(NULL)
        sidData(NULL)
+       #dat1(NULL)
+       rv$dat1 <- NULL
+       rv$dat2 <- NULL
+
      }
      
    })
@@ -75,18 +82,18 @@ server <- function(input, output, session) {
   # create sid-------------------
   observeEvent(input$map_marker_click, {
     
-    ##TODO this can only be created if addSelect is false
     if(!isTruthy(input$addSelect)) {
       click <- input$map_marker_click
+      #click <- input$map_marker_click
       sid(click$id)
-      #print("first click")
-      #print(sid())
+      print("first click")
+      print(sid())
       
-      #return sidData
+      #return sidData needed to filter time
       sidDF <- siteData(dat, site = click$id)
       sidData(sidDF)
     }
-    
+
   })
   
   output$siteID <- renderUI({
@@ -109,19 +116,18 @@ server <- function(input, output, session) {
     if(input$landCover != " ") {
       landcover <- input$landCover
       cover(landcover)
+      #dat1(NULL)
+      rv$dat1 <- NULL
     }
 
   })
   
-  
-  
+
   # filterTimeUI--------------------
   output$filterTimeUI <- renderUI({
     
-    #req(input$filterSpace != " ")
     req(isTruthy(cover()) || isTruthy(sid()))
-    #print("inside filterTimeUI")
-    #print(input$landCover)
+    
     tagList(
       selectInput(inputId = "filterTime", label = "Filter data in time by:", choices = c(" ", "Year", "Month", "Day")),
       uiOutput("timeSelectUI")
@@ -132,16 +138,17 @@ server <- function(input, output, session) {
   #addSelectionUI------------------
   output$addSelectionUI <- renderUI({
     
-    req(isTruthy(input$year),
-        isTruthy(sidData()) || isTruthy(input$landCover)
-    )
+    # req(isTruthy(input$year),
+    #     isTruthy(sidData()) || isTruthy(input$landCover)
+    # )
+    req(rv$dat1)
+    #req(dat1())
     
     wellPanel(
       tagList(
         fluidRow(
           column(6,
-                 checkboxInput(inputId = "addSelect", label = "Compare additional location(s)", value = FALSE),
-                 actionButton(inputId = "clear", label = "Clear selection(s)")),
+                 checkboxInput(inputId = "addSelect", label = "Compare additional location(s)", value = FALSE)),
           column(6,
                  uiOutput("filterSpace2UI"),
                  uiOutput("siteSelect2UI"),
@@ -161,7 +168,7 @@ server <- function(input, output, session) {
   
   output$siteSelect2UI <- renderUI({
 
-    req(input$filterSpace2 == "Site")
+    req(input$filterSpace2 == "Site" & input$addSelect == TRUE)
     tagList(
       h5("Find second site on the map and click the site marker"),
       #uiOutput("siteID2")
@@ -171,9 +178,9 @@ server <- function(input, output, session) {
   ## update map for second site selection-----------------
   observeEvent(input$filterSpace2, {
     
+    print("inside filter space 2")
+    rv$dat2 <- NULL
     if(input$filterSpace2 == "Site") {
-      ##TODO can't change from land cover selection back to site (after land cover has been selected and graph made)
-      ##TODO vice versa. Is this because dat2?
       
       leafletProxy("map") %>%
         addCircleMarkers(data = sites_sf,
@@ -192,15 +199,20 @@ server <- function(input, output, session) {
         
         click2 <- input$map_marker_click
         sid2(click2$id)
-        #print("second click")
-        #print(sid2())
+        print("second click")
+        print(sid2())
         
-      })
+      }, ignoreInit = TRUE)
       
+      cover2(NULL)
+
     } else if(input$filterSpace2 == "Land cover") {
       
       leafletProxy("map") %>%
         clearGroup("siteData")
+      
+      sid2(NULL)
+      
     }
       
   })
@@ -230,7 +242,7 @@ server <- function(input, output, session) {
   output$timeSelectUI <- renderUI({
     
     req(
-      isTruthy(sid()) || isTruthy(input$landCover)
+      isTruthy(sid()) || isTruthy(cover())
       )
     
     tagList(
@@ -276,18 +288,14 @@ server <- function(input, output, session) {
     
     req(input$year)
     req(input$month)
-    print(input$month)
     req(input$filterTime == "Day")
     if(spaceFilter() == "site") {
       dayChoices <- siteMonthData(sidData(), yearSelect = input$year, monthSelect = match(input$month, month.abb))
-      ##TODO have to either edit data to have month.abb or filter by number
-      print(dayChoices)
       dayChoices <- sort(unique(dayChoices$day))
     } else {
       dayChoices <- days %>% filter(year == input$year, month == input$month)
       dayChoices <- 1:dayChoices$day
     }
-    print(dayChoices)
     
     selectInput(inputId = "day", label = "Select day", choices = c("", dayChoices))
     
@@ -295,52 +303,62 @@ server <- function(input, output, session) {
   
   # create data-----------------
   rv <- reactiveValues(
-    
+
     dat1 = NULL,
     dat2 = NULL
-    
+
   )
+  #dat1 <- reactiveVal()
   
   ## dat1---------------
-  observe({
+  observeEvent(ignoreInit = TRUE, list(input$year, input$month, input$day), {
     
-    req(input$filterSpace)
+    print("inside creating dat1 observe")
+    #req(input$filterSpace)
     req(input$year)
     
     if(input$filterSpace == "Site") {
       landLabel1 = sid()
     } else if(input$filterSpace == "Land cover") {
       landLabel1 = input$landCover
+      print(input$landCover)
     }
-    
+
     if(input$filterTime == "Year") {
       print("creating year dat1")
       rv$dat1 <- createSiteYearData(siteType = input$filterSpace, dat = dat, yearSelect = input$year, landLabel = landLabel1)
+      #dat1(createSiteYearData(siteType = input$filterSpace, dat = dat, yearSelect = input$year, landLabel = landLabel1))
     } else if(input$filterTime == "Month") {
       req(input$month)
       print("creating month dat1")
       month = which(input$month == month.abb)[[1]]
       rv$dat1 <- createSiteMonthData(siteType = input$filterSpace, dat = dat, yearSelect = input$year, monthSelect = month, landLabel = landLabel1)
+      #dat1(createSiteMonthData(siteType = input$filterSpace, dat = dat, yearSelect = input$year, monthSelect = month, landLabel = landLabel1))
     } else if(input$filterTime == "Day") {
       req(input$day)
       print("creating day dat1")
       month = which(input$month == month.abb)[[1]]
       rv$dat1 <- createSiteDayData(siteType = input$filterSpace, dat = dat, yearSelect = input$year, monthSelect = month, daySelect = input$day, landLabel = landLabel1)
+      #dat1(createSiteDayData(siteType = input$filterSpace, dat = dat, yearSelect = input$year, monthSelect = month, daySelect = input$day, landLabel = landLabel1))
     }
-    
-    print(head(rv$dat1))
 
+    #dat1(data.frame(x = 1:10, y = runif(10)))
+    print(head(rv$dat1))
+    #print(head(dat1()))
+  
   })
   
   ##dat2-----------------
   
-  observe({
-    
+  observeEvent(ignoreInit = TRUE, list(input$landCover2, sid2()), {
+     
       req(
         isTruthy(sid2()) || isTruthy(cover2())
       )
-      req(input$filterSpace2)
-      req(input$year)
+      #req(input$filterSpace2)
+      print(
+        "creating dat 2"
+      )
 
       print(input$filterSpace2)
       if(input$filterSpace2 == "Site") {
@@ -370,10 +388,14 @@ server <- function(input, output, session) {
   
   output$plotUI <- renderUI({
     
+    #req(dat1())
+    
     # req(isTruthy(input$year),
     #   isTruthy(sidData()) || isTruthy(input$landCover)
     # )
+    ##TODO radio button and action button are still there when dat1 is nulled
     req(rv$dat1)
+    #req(dat1())
     
     tagList(
       radioButtons("tempLabel", "Degree units display", choices = c("Celsius", "Fahrenheit"), selected = "Celsius", inline = TRUE),
@@ -386,7 +408,9 @@ server <- function(input, output, session) {
       } else if(input$filterTime == "Day") {
         #withSpinner(plotlyOutput("dayFig"), type = 8)
         uiOutput("dayFigure")
-      }
+      },
+      br(),
+      actionButton(inputId = "clear", label = "Clear selection(s)")
     )
     
    
@@ -395,26 +419,28 @@ server <- function(input, output, session) {
 
   ### year plot ---------
   output$yearFig <- renderUI({
-    
+
     req(input$filterTime == "Year")
-    
+    req(rv$dat1)
+
     if(isTruthy(sid2()) || isTruthy(cover2())) {
       withSpinner(plotlyOutput("compareDatYearFig"), type = 8)
     } else {
       withSpinner(plotlyOutput("singleDatYearFig"), type = 8)
     }
-    
+
   })
   
+  #output$yearFig <- renderPlotly({
   output$singleDatYearFig <- renderPlotly({
-  
+     
     print("singleDatYearFig")
     dat1df <- req(rv$dat1)
-    req(input$year)
-    deg <- req(input$tempLabel) 
+    #dat1df <- req(dat1())
+    deg <- req(input$tempLabel)
     #print(head(dat1df))
- 
-  
+
+
     if(deg == "Celsius") {
       convertDat1 <- dat1df %>%
         mutate(temp = round(tempC,1))
@@ -425,15 +451,15 @@ server <- function(input, output, session) {
         mutate(temp = round(CtoF(tempC),1))
     }
     #print(head(convertDat1))
-  
+
     if(input$filterSpace == "Site") {
       title = paste("Temperatures at", sid(), "in", input$year)
-      landLabel1 = sid() 
+      landLabel1 = sid()
     } else if(input$filterSpace == "Land cover") {
       title = paste("Temperatures in", input$landCover, "areas in", input$year)
       landLabel1 = input$landCover
     }
-  
+
     completeYearPlot(dat1 = convertDat1, title = title, landLabel1 = landLabel1, yLabel = yLabel, compare = FALSE)
   
   })
@@ -441,9 +467,9 @@ server <- function(input, output, session) {
   output$compareDatYearFig <- renderPlotly({
     
     print("compareYearFig")
-    req(input$year)
     dat1df <- req(rv$dat1)
     dat2df <- req(rv$dat2)
+    print(head(dat2df))
     deg <- req(input$tempLabel) 
     
     if(deg == "Celsius") {
@@ -489,6 +515,7 @@ server <- function(input, output, session) {
   output$monthFig <- renderUI({
     
     req(input$filterTime == "Month")
+    print("inside monthFig")
     
     if(isTruthy(sid2()) || isTruthy(cover2())) {
       withSpinner(plotlyOutput("compareDatMonthFig"), type = 8)
@@ -500,10 +527,12 @@ server <- function(input, output, session) {
   
   output$singleDatMonthFig <- renderPlotly({
     
+    print("inside singleMonthFig")
     dat1df <- req(rv$dat1)
+    #dat1df <- req(dat1())
     req(input$year)
     deg <- req(input$tempLabel) 
-    #print(head(dat1df))
+    print(head(dat1df))
     
     if(deg == "Celsius") {
       convertDat1 <- dat1df 
@@ -586,6 +615,7 @@ server <- function(input, output, session) {
   
   output$singleDatDayFig <- renderPlotly({
     
+    #dat1df <- req(dat1())
     dat1df <- req(rv$dat1)
     deg <- req(input$tempLabel) 
     
@@ -631,24 +661,18 @@ server <- function(input, output, session) {
         mutate(meanTemp = round(CtoF(meanTemp),2))
       yLabel = "Mean temp (°F)"
     }
-    print(head(convertDat1))
-    print(head(convertDat2))
     
     if(input$filterSpace == "Site") {
       landLabel1 = sid()
     } else if(input$filterSpace == "Land cover") {
       landLabel1 = input$landCover
     }
-    print("landLabel1")
-    print(landLabel1)
     
     if(input$filterSpace2 == "Site") {
       landLabel2 = sid2()
     } else if(input$filterSpace2 == "Land cover") {
       landLabel2 = input$landCover2
     }
-    print("landLabel2")
-    print(landLabel2)
     
     title = paste0("Temperatures on ", input$month, " ", input$day, ", ", input$year)
     
@@ -657,67 +681,25 @@ server <- function(input, output, session) {
     
   })
 
-
-# output$monthFig <- renderPlotly({
-#   
-#   req(input$filterTime == "Month")
-#   req(input$month)
-#   deg = input$tempLabel
-#   
-#   if(spaceFilter() == "site") {
-#     #print("inside site month plot")
-#     #print(head(sidData()))
-#     sidDat <- siteMonthData(sidData(), yearSelect = input$year, monthSelect = match(input$month, month.abb))
-#     # sidDat <- sidDat %>% mutate_if(is.character, as.factor)
-#     # print(summary(sidDat))
-#     title <- paste("Temperatures at", sid(), "in", input$month, input$year)
-#     #print(title)
-#     p <- monthPlot(sidDat, title, degree = deg)
-#   } else {
-#     title <- paste("Temperatures in", input$landCover, "areas in", input$month, input$year)
-#     landCoverDat <- dat %>% filter(cat == input$landCover, year == input$year, month == match(input$month, month.abb))
-#     print(head(landCoverDat))
-#     p <- monthPlot(landCoverDat, title, degree = deg)
-#   }
-#   
-#   return(p)
-#   
-# })
-
-output$dayFig <- renderPlotly({
+  # clear--------------------
+  observeEvent(input$clear, {
+    
+    #session$reload()
+    rv$dat1 <- NULL
+    rv$dat2 <- NULL
+    sid(NULL)
+    sid2(NULL)
+    cover(NULL)
+    cover2(NULL)
+    updateSelectInput(inputId = "filterSpace", selected = " ")
+    updateSelectInput(inputId = "filterTime", selected = " ")
+    updateSelectInput(inputId = "landCover", selected = " ")
+    updateSelectInput(inputId = "year", selected = " ")
+    updateSelectInput(inputId = "month", selected = " ")
+    updateSelectInput(inputId = "day", selected = " ")
+    ##TODO need to remove blank plot
+    
   
-  req(input$filterTime == "Day")
-  req(input$day)
-  deg = input$tempLabel
-  
-  if(spaceFilter() == "site") {
-    print("inside site day plot")
-    #print(head(sidData()))
-    sidDat <- siteDayData(sidData(), yearSelect = input$year, monthSelect = match(input$month, month.abb), daySelect = input$day)
-    # sidDat <- sidDat %>% mutate_if(is.character, as.factor)
-    # print(summary(sidDat))
-    title <- paste0("Temperatures at ", sid(), " on ", input$month, " ", input$day, ", ", input$year)
-    #print(title)
-    p <- dayPlot(sidDat, title, degree = deg, datType = "site")
-  } else {
-    title <- paste0("Temperatures in ", input$landCover, " areas on ", input$month, " ", input$day, ", ", input$year)
-    landCoverDat <- dat %>% filter(cat == input$landCover, year == input$year, month == match(input$month, month.abb), day == input$day)
-    print(nrow(landCoverDat))
-    p <- dayPlot(landCoverDat, title, degree = deg, datType = "landcover")
-  }
-  
-  return(p)
-  
-})
-
-# clear--------------------
-observeEvent(input$clear, {
-  
-  rv$dat1 <- NULL
-  rv$dat2 <- NULL
-  
-  
-})
-
+  })
 
 }
