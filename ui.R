@@ -1,9 +1,8 @@
 
 ui <- fluidPage(
   
-  useShinyjs(),
   tags$head(
-    tags$link(rel = "stylesheet", type = "text/css", href = "style.css"),
+    tags$link(rel = "stylesheet", type = "text/css", href = "style.css")
   ),
   
   titlePanel("Dane County Urban Heat Island Exploration"),
@@ -23,14 +22,21 @@ ui <- fluidPage(
              withSpinner(type = 3,
                          color.background = "white")),
     column(4, 
-           uiOutput("addSelectionUI"))
+           wellPanel(
+             shinyjs::useShinyjs(),
+             fluidRow(
+               column(6,
+                      checkboxInput(inputId = "addSelect", label = "Compare additional location", value = FALSE)
+                      ),
+               column(6,
+                      uiOutput("filterSpace2UI"),
+                      uiOutput("siteSelect2UI"),
+                      uiOutput("landCoverSelect2UI"))
+               )
+             )
+           )
+           #uiOutput("addSelectionUI"))
   ),
   hr(),
-  #fluidRow(
-   # column(3,
-           #radioButtons("tempLabel", "Degree units display", choices = c("Celsius", "Fahrenheit"), selected = "Celsius", inline = TRUE),
-    #column(9,
-     #      )
-  #),
-  uiOutput("plotUI")
+  uiOutput("plotUI") %>% withSpinner()
 )

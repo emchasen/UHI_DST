@@ -16,11 +16,11 @@ sites <- readxl::read_excel("data/sensorAttributes.xlsx") %>%
                                     is.na(category3) ~ paste(cat, category1, category2, sep = ", "),
                                     TRUE ~ paste(cat, category1, category2, category3, sep = ", ")))
 
-dat <- read_csv("data/partialDataLongDate.csv.gz") %>%
-  left_join(sites)
-
-# dat <- read_csv("data/sampleDat.csv.gz") %>%
+# dat <- read_csv("data/partialDataLongDate.csv.gz") %>%
 #   left_join(sites)
+
+dat <- read_csv("data/sampleDat.csv.gz") %>%
+  left_join(sites)
 
 days <- read_csv("data/days.csv")
 
@@ -66,7 +66,7 @@ base_map <- function() {
               #labFormat = labelFormat(prefix = "$"),
               opacity = 1) %>%
     addLayersControl(overlayGroups = c("Land Cover", "Sites"),
-                     options = layersControlOptions(collapsed = FALSE))
+                     options = layersControlOptions(collapsed = TRUE))
 }
 
 palSite <- colorFactor(palette = c("#cb9147", "#e8d1d2", "#b50101"), domain = sites$cat)
@@ -96,17 +96,12 @@ createSiteYearData <- function(siteType, dat, yearSelect, landLabel) {
                                  "Nov", "Dec")
     #return(filteredDat)
   } else if(siteType == "Land cover") {
-    print("inside create Site year data")
-    print(landLabel)
-    print(yearSelect)
     filteredDat <- dat %>% filter(cat == landLabel,
                           year == yearSelect) %>%
       mutate(monthName = month.abb[month])
     filteredDat$monthName = fct_relevel(filteredDat$monthName, "Jan", "Feb", "Mar", "Apr", "May",
                                 "Jun", "Jul", "Aug", "Sep", "Oct",
                                 "Nov", "Dec")
-    print(head(filteredDat))
-    #return(filteredDat)
   }
   
   filteredDat %>% drop_na(tempC)
@@ -195,8 +190,6 @@ coverData <- function(dat, cover) {
 
 yearPlotSingle <- function(dat, title, landLabel, yLabel) {
   
-  #print("making year plot single")
-  #print(head(dat))
   p <- plot_ly(data = dat) %>%
     add_trace(y = ~temp, x = ~monthName, type = "box",
               color=I("slateblue"), name = landLabel) %>%
@@ -238,20 +231,28 @@ completeYearPlot <- function(dat1, dat2 = NULL, title, landLabel1, landLabel2, y
 monthPlotSingle <- function(dat, title, landLabel, yLabel) {
   
   p <- plot_ly(data = dat, x = ~day) %>%
-    add_trace(y =~meanTemp, type = 'scatter', mode = 'lines+markers', 
+    add_trace(y =~minTemp, type = 'scatter', mode = 'lines+markers', 
               hoverinfo = "text",
-              name = landLabel,
-              line = list(color = "#6a5acd"),
+              name = paste(landLabel, "min temp"),
+              line = list(color = "#6a5acd", dash = "dash"),
               marker = list(color = "#6a5acd"),
-              hovertext = ~paste("Max temp:", round(maxTemp, 1), "<br>",
-                                 "Mean temp:", round(meanTemp, 1), "<br>",
-                                 "Min temp:", round(minTemp,1)),
-              error_y = ~list(array = c(maxTemp - meanTemp),
-                              arrayminus = c(meanTemp - minTemp),
-                              color = '#6a5acd')) %>%
+              hovertext = ~paste(landLabel, "min temp:", round(minTemp, 1))) %>%
+    add_trace(y = ~meanTemp, type = 'scatter', mode = 'lines+markers', 
+              hoverinfo = "text",
+              name = paste(landLabel, "mean temp"),
+              line = list(color = "#6a5acd", dash = "solid"),
+              marker = list(color = "#6a5acd"),
+              hovertext = ~paste(landLabel, "mean temp:", round(meanTemp, 1))) %>%
+    add_trace(y = ~maxTemp, type = 'scatter', mode = 'lines+markers', 
+              hoverinfo = "text",
+              name = paste(landLabel, "max temp"),
+              line = list(color = "#6a5acd", dash = "dot"),
+              marker = list(color = "#6a5acd"),
+              hovertext = ~paste(landLabel, "max temp:", round(maxTemp, 1))) %>%
     layout(title = list(text = title, font = list(size = 20), y = 0.95),
            xaxis = list(title = list(text = "Day of month", font = list(size = 20))),
-           yaxis = list(title = list(text = yLabel, font = list(size = 20))))
+           yaxis = list(title = list(text = yLabel, font = list(size = 20))),
+           hovermode = "x unified")
   
   return(p)
   
@@ -265,17 +266,27 @@ completeMonthPlot <- function(dat1, dat2 = NULL, title, landLabel1, landLabel2, 
     plt <- base_plot
   } else if(compare == TRUE) {
     if(nrow(dat2) > 1) {
+      dat2 <- dat2 %>%
+        mutate(day = day + 0.2)
       plt <- base_plot %>%
-        add_trace(data = dat2, y =~meanTemp, type = 'scatter', mode = 'lines+markers', 
+        add_trace(data = dat2, y =~minTemp, x = ~day, type = 'scatter', mode = 'lines+markers', 
                   hoverinfo = "text", 
-                  name = landLabel2,
-                  #line = list(color = "#00BE67"),
-                  #marker = list(color = "#00BE67"),
-                  hovertext = ~paste("Max temp:", round(maxTemp, 1), "<br>",
-                                     "Mean temp:", round(meanTemp, 1), "<br>",
-                                     "Min temp:", round(minTemp,1)),
-                  error_y = ~list(array = c(maxTemp - meanTemp),
-                                  arrayminus = c(meanTemp - minTemp)))
+                  name = paste(landLabel2, "min temp"),
+                  line = list(color = "#CA2C92", dash = "dash"),
+                  marker = list(color = "#CA2C92"),
+                  hovertext = ~paste(landLabel2, "min temp:", round(minTemp,1))) %>%
+        add_trace(y = ~meanTemp, type = 'scatter', mode = 'lines+markers', 
+                  hoverinfo = "text", 
+                  name = paste(landLabel2, "mean temp"),
+                  line = list(color = "#CA2C92", dash = "solid"),
+                  marker = list(color = "#CA2C92"),
+                  hovertext = ~paste(landLabel2, "mean temp:", round(meanTemp,1))) %>%
+        add_trace(y = ~maxTemp, type = 'scatter', mode = 'lines+markers', 
+                  hoverinfo = "text", 
+                  name = paste(landLabel2, "max temp"),
+                  line = list(color = "#CA2C92", dash = "dot"),
+                  marker = list(color = "#CA2C92"),
+                  hovertext = ~paste(landLabel2, "max temp:", round(maxTemp,1)))
     } else if(nrow(dat2) < 1) {
       plt <- base_plot %>%
         layout(title = list(text = paste0(title, ": ", "<span style='color:red'>Choose another site
