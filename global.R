@@ -27,7 +27,7 @@ days <- read_csv("data/days.csv")
 # # make a sample dat
 # datSample <- dat %>%
 #   group_by(sid, year) %>%
-#   slice_sample(n = 250) 
+#   slice_sample(n = 250)
 # 
 # write_csv(datSample, "data/sampleDat.csv.gz")
 
@@ -142,10 +142,10 @@ createSiteDayData <- function(siteType, dat, yearSelect, monthSelect, daySelect,
     #return(filteredDat)
   } else if(siteType == "Land cover") {
     filteredDat <- dat %>% 
-      filter(cat == landLabel,
-             year == yearSelect,
-             month == monthSelect,
-             day == daySelect) 
+      filter(cat == landLabel)#,
+             # year == yearSelect,
+             # month == monthSelect,
+             # day == daySelect) 
   }
   
   filteredDat <- filteredDat %>% 
@@ -161,6 +161,24 @@ createSiteDayData <- function(siteType, dat, yearSelect, monthSelect, daySelect,
   filteredDat$Time <- substr(as.POSIXct(sprintf("%04.0f", filteredDat$Time1), format='%H%M'), 12, 16)
   
   return(filteredDat)
+  
+}
+
+createDateRangeData <- function(siteType, dat, startDate, endDate, landLabel) {
+  
+  if(siteType == "Site") {
+    filteredDat <- dat %>% 
+      filter(sid == landLabel) %>%
+      filter(between(date, startDate, endDate))
+  } else if(siteType == "Land cover") {
+    filteredDat <- dat %>% 
+      filter(cat == landLabel) %>%
+      filter(between(date, startDate, endDate))
+  }
+  
+  sumDat <- filteredDat %>%
+    group_by(time) %>%
+    summarise(meanTemp = mean(tempC, na.rm = TRUE))
   
 }
 
@@ -266,8 +284,6 @@ completeMonthPlot <- function(dat1, dat2 = NULL, title, landLabel1, landLabel2, 
     plt <- base_plot
   } else if(compare == TRUE) {
     if(nrow(dat2) > 1) {
-      dat2 <- dat2 %>%
-        mutate(day = day + 0.2)
       plt <- base_plot %>%
         add_trace(data = dat2, y =~minTemp, x = ~day, type = 'scatter', mode = 'lines+markers', 
                   hoverinfo = "text", 
@@ -371,3 +387,45 @@ completeDayPlot <- function(dat1, dat2 = NULL, datType1, datType2, title, landLa
   
 }
 
+dateRangeSinglePlot <- function(dat, title, landLabel, yLabel) {
+  
+  plot_ly(data = dat, x = ~time) %>%
+    add_trace(y = ~meanTemp, type = "scatter", mode = "lines+markers",
+              name = landLabel,
+              line = list(color = "#6a5acd"),
+              marker = list(color = "#6a5acd"),
+              hoverinfo = "text",
+              hovertext = ~paste0(landLabel, ": ", round(meanTemp, 1))) %>%
+    layout(title = list(text = title, font = list(size = 20), y = 0.95),
+           xaxis = list(title = list(text = "Day", font = list(size = 20))),
+           yaxis = list(title = list(text = yLabel, font = list(size = 20))),
+           hovermode = "x unified")
+  
+}
+
+dateRangeCompletePlot <- function(dat1, dat2 = NULL, title, landLabel1, landLabel2, yLabel, compare) {
+  
+  base_plot <- dateRangeSinglePlot(dat = dat1, title = title, landLabel = landLabel1, yLabel = yLabel)
+  
+  if(compare == FALSE) {
+    plt <- base_plot
+  } else if(compare == TRUE) {
+    if(nrow(dat2) > 1) {
+      plt <- base_plot %>%
+        add_trace(data = dat2, y =~meanTemp, x = ~time, type = 'scatter', mode = 'lines+markers', 
+                  hoverinfo = "text", 
+                  name = landLabel2,
+                  line = list(color = "#CA2C92"),
+                  marker = list(color = "#CA2C92"),
+                  hovertext = ~paste0(landLabel2, ": ", round(meanTemp,1))) 
+      
+    } else if(nrow(dat2) < 1) {
+      plt <- base_plot %>%
+        layout(title = list(text = paste0(title, ": ", "<span style='color:red'>Choose another site
+                                          (mising data)</span>")))
+    }
+  }
+  
+  plt
+  
+}

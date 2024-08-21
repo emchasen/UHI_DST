@@ -12,7 +12,8 @@ ui <- fluidPage(
       column(6,
              selectInput(inputId = "filterSpace", label = "Filter data spatially by:", choices = c(" ", "Site", "Land cover"), selected = " "),
              uiOutput("siteSelectUI"),
-             uiOutput("landCoverSelectUI")),
+             uiOutput("landCoverSelectUI"),
+             actionButton("plot", "Make plot")),
       column(6,
              uiOutput("filterTimeUI"))
     )),
@@ -27,6 +28,7 @@ ui <- fluidPage(
              fluidRow(
                column(6,
                       checkboxInput(inputId = "addSelect", label = "Compare additional location", value = FALSE)
+                      #actionButton("clear", "Clear selection(s)")
                       ),
                column(6,
                       uiOutput("filterSpace2UI"),
@@ -38,5 +40,6 @@ ui <- fluidPage(
            #uiOutput("addSelectionUI"))
   ),
   hr(),
+  uiOutput("dateRangeText"),
   uiOutput("plotUI") %>% withSpinner()
 )

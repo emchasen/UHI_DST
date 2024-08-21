@@ -160,7 +160,7 @@ server <- function(input, output, session) {
     req(isTruthy(cover()) || isTruthy(sid()))
     
     tagList(
-      selectInput(inputId = "filterTime", label = "Filter data in time by:", choices = c(" ", "Year", "Month", "Day")),
+      selectInput(inputId = "filterTime", label = "Filter data in time by:", choices = c(" ", "Year", "Month", "Day", "Date range")),
       uiOutput("timeSelectUI")
     )
     
@@ -168,8 +168,10 @@ server <- function(input, output, session) {
   
   #addSelectionUI------------------
   shinyjs::disable("addSelect")
+  #shinyjs::disable("clear")
   observeEvent(rv$dat1, {
     shinyjs::enable("addSelect")
+   # shinyjs::enable("clear")
   })
   
   # output$addSelectionUI <- renderUI({
@@ -299,13 +301,15 @@ server <- function(input, output, session) {
     tagList(
       uiOutput("yearSelect"),
       uiOutput("monthSelect"),
-      uiOutput("daySelect")
+      uiOutput("daySelect"),
+      uiOutput("dateRange")
     )
    
   })
   
   output$yearSelect <- renderUI({
     
+    req(input$filterTime == "Year" || input$filterTime == "Month" || input$filterTime == "Day")
     if(spaceFilter() == "site") {
       yearChoices <- unique(sidData()$year)
     } else {
@@ -325,7 +329,7 @@ server <- function(input, output, session) {
       monthChoices <- month.abb[sort(unique(monthChoices$month))]
     } else {
       if(input$year == 2012) {
-        monthChoices <- month.abb[3:12] 
+        monthChoices <- month.abb[4:12] 
       } else{
         monthChoices <- month.abb[1:12]
       }
@@ -352,6 +356,17 @@ server <- function(input, output, session) {
     
   })
   
+  output$dateRange <- renderUI ({
+    
+    req(input$filterTime == "Date range")
+    
+    tagList(
+      dateRangeInput(inputId = "dateRangeSelect", label = "Date range", start = "2012-04-01", end = "2023-12-31"),
+      helpText("Select date range less than one month")
+    )
+    
+  })
+  
   # create data-----------------
   rv <- reactiveValues(
 
@@ -361,9 +376,9 @@ server <- function(input, output, session) {
   )
   
   ## dat1---------------
-  observeEvent(ignoreInit = TRUE, list(input$year, input$month, input$day), {
+  observeEvent(ignoreInit = TRUE, list(input$year, input$month, input$day, input$dateRangeSelect), {
     
-    req(input$year)
+    req(input$filterTime)
     print("creating dat 1")
     
     if(input$filterSpace == "Site") {
@@ -388,6 +403,15 @@ server <- function(input, output, session) {
       month = which(input$month == month.abb)[[1]]
       rv$dat1 <- createSiteDayData(siteType = input$filterSpace, dat = dat, yearSelect = input$year, monthSelect = month, daySelect = input$day, landLabel = landLabel1)
       
+    } else if(input$filterTime == "Date range") {
+      
+      print("date range")
+      validate(
+        need(difftime(input$dateRangeSelect[2], input$dateRangeSelect[1], "days") < 31, "Date range is greater than one month"
+      ))
+      
+      rv$dat1 <- createDateRangeData(siteType = input$filterSpace, dat = dat, startDate = input$dateRangeSelect[1],
+                                     endDate = input$dateRangeSelect[2], landLabel = landLabel1)
     }
     
     #print("dat1")
@@ -429,6 +453,11 @@ server <- function(input, output, session) {
         month = which(input$month == month.abb)[[1]]
         rv$dat2 <- createSiteDayData(siteType = input$filterSpace2, dat = dat, yearSelect = input$year, monthSelect = month, daySelect = input$day, landLabel = landLabel2)
         
+      } else if(input$filterTime == "Date range") {
+        
+        req(input$dateRangeSelect)
+        rv$dat2 <- createDateRangeData(siteType = input$filterSpace2, dat = dat, startDate = input$dateRangeSelect[1],
+                                       endDate = input$dateRangeSelect[2], landLabel = landLabel2)
       }
     
     #print("dat2")
@@ -444,7 +473,12 @@ server <- function(input, output, session) {
     print("plotUI")
    
     tagList(
-      radioButtons("tempLabel", "Degree units display", choices = c("Celsius", "Fahrenheit"), selected = "Celsius", inline = TRUE),
+      fluidRow(
+        column(6,
+               radioButtons("tempLabel", "Degree units display", choices = c("Celsius", "Fahrenheit"), selected = "Celsius", inline = TRUE)),
+        column(6, 
+               actionButton("clear", "Clear selection(s)"))
+      ),
       if(input$filterTime == "Year") {
         #uiOutput("yearFig")
         withSpinner(plotlyOutput("yearFig"), type = 8)
@@ -454,12 +488,28 @@ server <- function(input, output, session) {
       } else if(input$filterTime == "Day") {
         #uiOutput("dayFigure")
         withSpinner(plotlyOutput("dayFig"), type = 8)
-      },
-      br(),
-      actionButton(inputId = "clear", label = "Clear selection(s)")
+      } else if(input$filterTime == "Date range") {
+        print("plotly range fig")
+        withSpinner(plotlyOutput("rangeFig"), type = 8)
+      }
+     
     )
     
-   
+  })
+  
+  output$dateRangeText <- renderUI({
+    
+    req(input$filterTime == "Date range")
+    
+    print(input$dateRangeSelect[2])
+    print(class(input$dateRangeSelect[2]))
+    
+    validate(
+      need(difftime(input$dateRangeSelect[2], input$dateRangeSelect[1], "days") < 31, "Date range is greater than one month"
+      ))
+    
+    #print(difftime(input$dateRangeSelect[2], input$dateRangeSelect[1], "days"))
+    
   })
   
 
@@ -848,6 +898,85 @@ server <- function(input, output, session) {
     }
     
     return(dayPlot)
+    
+  })
+  
+  ## range plot------------
+  output$rangeFig <- renderPlotly({
+    
+    validate(
+      need(difftime(input$dateRangeSelect[2], input$dateRangeSelect[1], "days") < 31, "Date range is greater than one month"
+      ))
+    
+    print(difftime(input$dateRangeSelect[2], input$dateRangeSelect[1], "days"))
+    
+    req(input$filterTime == "Date range")
+    req(rv$dat1)
+    print("rangeFig")
+    dat1df <- rv$dat1
+    
+    deg <- req(input$tempLabel)
+    
+    if(is.null(rv$dat2)) {
+      #print("dat 2 is null")
+      if(deg == "Celsius") {
+        convertDat1 <- dat1df 
+        yLabel = "Temp (°C)"
+      } else if(deg == "Fahrenheit") {
+        yLabel = "Temp (°F)"
+        ##TODO how should I handle the se? I can't convert it with CtoF
+        convertDat1 <- dat1df %>%
+          mutate(meanTemp = round(CtoF(meanTemp),2))
+      }
+      
+      if(input$filterSpace == "Site") {
+        title = paste0("Temperatures at ", sid(), " from ", input$dateRangeSelect[1], " to ", input$dateRangeSelect[2])
+        landLabel1 = sid() 
+      } else if(input$filterSpace == "Land cover") {
+        title = paste0("Temperatures in ", input$landCover, " areas from ", input$dateRangeSelect[1], " to ", input$dateRangeSelect[2])
+        landLabel1 = input$landCover
+      }
+      
+      rangePlot <- dateRangeCompletePlot(dat1 = convertDat1, title = title, landLabel1 = landLabel1, yLabel = yLabel, compare = FALSE)
+      
+    } else {
+      #print("dat 2 is not null")
+      dat2df <- req(rv$dat2)
+      if(deg == "Celsius") {
+        convertDat1 <- dat1df 
+        convertDat2 <- dat2df 
+        yLabel = "Temp (°C)"
+      } else if(deg == "Fahrenheit") {
+        ##TODO how should I handle the se? I can't convert it with CtoF
+        convertDat1 <- dat1df %>%
+          mutate(meanTemp = round(CtoF(meanTemp),2))
+        convertDat2 <- dat2df %>%
+          mutate(meanTemp = round(CtoF(meanTemp),2))
+        yLabel = "Temp (°F)"
+      }
+      
+      if(input$filterSpace == "Site") {
+        landLabel1 = sid()
+      } else if(input$filterSpace == "Land cover") {
+        landLabel1 = input$landCover
+      }
+      
+      if(input$filterSpace2 == "Site") {
+        landLabel2 = sid2()
+      } else if(input$filterSpace2 == "Land cover") {
+        landLabel2 = input$landCover2
+      }
+      
+      title = paste0("Temperatures from ", input$dateRangeSelect[1], " to ", input$dateRangeSelect[2])
+      
+      rangePlot <- dateRangeCompletePlot(dat1 = convertDat1, dat2 = convertDat2, title = title, 
+                                         landLabel1 = landLabel1, landLabel2 = landLabel2, yLabel = yLabel, 
+                                         compare = TRUE)
+      
+    }
+    
+    return(rangePlot)
+    
     
   })
   # output$dayFigure <- renderUI({
