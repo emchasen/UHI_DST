@@ -166,40 +166,29 @@ server <- function(input, output, session) {
     
   })
   
-  #addSelectionUI------------------
-  shinyjs::disable("addSelect")
-  #shinyjs::disable("clear")
-  observeEvent(rv$dat1, {
-    shinyjs::enable("addSelect")
-   # shinyjs::enable("clear")
+  #add selection UI------------------
+  output$addSelectionUI <- renderUI({
+
+    wellPanel(
+      tagList(
+        fluidRow(
+          shinyjs::useShinyjs(),
+          column(6,
+                 downloadButton(outputId = "download"),
+                 br(),
+                 checkboxInput(inputId = "addSelect", label = "Compare additional location(s)", value = FALSE),
+                 br(),
+                 actionButton("clear", "Clear selection(s)")),
+          column(6,
+                 uiOutput("filterSpace2UI"),
+                 uiOutput("siteSelect2UI"),
+                 uiOutput("landCoverSelect2UI"))
+        )
+      )
+    )
+
   })
-  
-  # output$addSelectionUI <- renderUI({
-  #   
-  #   # req(isTruthy(input$year),
-  #   #     isTruthy(sidData()) || isTruthy(input$landCover)
-  #   # )
-  #   #req(rv$dat1)
-  #   #print("inside add selection")
-  #   #req(dat1())
-  #   
-  #   wellPanel(
-  #     tagList(
-  #       fluidRow(
-  #         shinyjs::useShinyjs(),
-  #         column(6,
-  #                
-  #                checkboxInput(inputId = "addSelect", label = "Compare additional location(s)", value = FALSE)),
-  #         column(6,
-  #                uiOutput("filterSpace2UI"),
-  #                uiOutput("siteSelect2UI"),
-  #                uiOutput("landCoverSelect2UI"))
-  #       )
-  #     )
-  #   )
-  #   
-  # })
-  # 
+
   output$filterSpace2UI <- renderUI({
     
     req(input$addSelect)
@@ -374,11 +363,40 @@ server <- function(input, output, session) {
     dat2 = NULL
 
   )
-  
+  # make filterData button---------------
+  # shinyjs::disable("filterData")
+  # observeEvent(ignoreInit = TRUE, list(input$year, input$month, input$day, input$dateRangeSelect), {
+  #   
+  #   if(input$filterTime == "Year") {
+  #     
+  #     req(input$year)
+  #     shinyjs::enable("filterData")
+  #     
+  #   } else if(input$filterTime == "Month") {
+  #     
+  #     req(input$month)
+  #     shinyjs::enable("filterData")
+  #     
+  #   } else if(input$filterTime == "Day") {
+  #     
+  #     req(input$day)
+  #     shinyjs::enable("filterData")
+  #     
+  #   } else if(input$filterTime == "Date range") {
+  #     
+  #     print("date range")
+  #     validate(
+  #       need(difftime(input$dateRangeSelect[2], input$dateRangeSelect[1], "days") < 31, "Date range is greater than one month"
+  #       ))
+  #     shinyjs::enable("filterData")
+  #     
+  #   }
+  #   
+  # })
   ## dat1---------------
   observeEvent(ignoreInit = TRUE, list(input$year, input$month, input$day, input$dateRangeSelect), {
+  #observeEvent(ignoreInit = TRUE, input$filterData, {
     
-    req(input$filterTime)
     print("creating dat 1")
     
     if(input$filterSpace == "Site") {
@@ -389,6 +407,7 @@ server <- function(input, output, session) {
 
     if(input$filterTime == "Year") {
       
+      req(input$year)
       rv$dat1 <- createSiteYearData(siteType = input$filterSpace, dat = dat, yearSelect = input$year, landLabel = landLabel1)
 
     } else if(input$filterTime == "Month") {
@@ -405,11 +424,7 @@ server <- function(input, output, session) {
       
     } else if(input$filterTime == "Date range") {
       
-      print("date range")
-      validate(
-        need(difftime(input$dateRangeSelect[2], input$dateRangeSelect[1], "days") < 31, "Date range is greater than one month"
-      ))
-      
+      req(input$dateRangeSelect)
       rv$dat1 <- createDateRangeData(siteType = input$filterSpace, dat = dat, startDate = input$dateRangeSelect[1],
                                      endDate = input$dateRangeSelect[2], landLabel = landLabel1)
     }
@@ -475,10 +490,8 @@ server <- function(input, output, session) {
     tagList(
       fluidRow(
         column(6,
-               radioButtons("tempLabel", "Degree units display", choices = c("Celsius", "Fahrenheit"), selected = "Celsius", inline = TRUE)),
-        column(6, 
-               actionButton("clear", "Clear selection(s)"))
-      ),
+               radioButtons("tempLabel", "Degree units display", choices = c("Celsius", "Fahrenheit"), selected = "Celsius", inline = TRUE))
+        ),
       if(input$filterTime == "Year") {
         #uiOutput("yearFig")
         withSpinner(plotlyOutput("yearFig"), type = 8)
@@ -491,8 +504,9 @@ server <- function(input, output, session) {
       } else if(input$filterTime == "Date range") {
         print("plotly range fig")
         withSpinner(plotlyOutput("rangeFig"), type = 8)
-      }
-     
+      },
+      br(),
+      uiOutput("addSelectionUI")
     )
     
   })

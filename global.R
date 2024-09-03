@@ -16,11 +16,11 @@ sites <- readxl::read_excel("data/sensorAttributes.xlsx") %>%
                                     is.na(category3) ~ paste(cat, category1, category2, sep = ", "),
                                     TRUE ~ paste(cat, category1, category2, category3, sep = ", ")))
 
-# dat <- read_csv("data/partialDataLongDate.csv.gz") %>%
-#   left_join(sites)
-
-dat <- read_csv("data/sampleDat.csv.gz") %>%
+dat <- read_csv("data/partialDataLongDate.csv.gz") %>%
   left_join(sites)
+
+# dat <- read_csv("data/sampleDat.csv.gz") %>%
+#   left_join(sites)
 
 days <- read_csv("data/days.csv")
 
@@ -36,6 +36,10 @@ sites_sf <- sites %>%
 
 ##TODO remake raster without barren/shrubland. Probably also include more counties
 landCover <- rast("data/daneCountyLandCover.tif")
+jan_day <- rast("data/january2023_daytime_degF.tif")
+jan_night <- rast("data/january2023_nighttime_degF.tif")
+jul_day <- rast("data/july2023_daytime_degF.tif")
+jul_night <- rast("data/july2023_nighttime_degF.tif")
 
 CtoF <- function(x) {
   F = (x * (9/5)) + 32
@@ -56,16 +60,22 @@ base_map <- function() {
                group = "Sites") %>%
     setView(lat = 43.08, lng = -89.37, zoom = 10) %>%
     addProviderTiles("USGS.USImageryTopo")  %>%
+    addRasterImage(jan_night, group = "Jan. 2023, night heat index") %>%
+    addRasterImage(jan_day, group = "Jan. 2023, day heat index") %>%
+    addRasterImage(jul_night, group = "Jul. 2023, night heat index") %>%
+    addRasterImage(jul_day, group = "Jul. 2023, day heat index") %>%
     addRasterImage(landCover, group = "Land Cover",
                    colors = c("#b50101", "#e8d1d2",  "#cb9147", "darkgreen", "skyblue1", "steelblue3", "wheat")) %>%
-    #colors = c("#b50101", "#e8d1d2",  "#cb9147", "darkgreen", "skyblue1", "steelblue3", "wheat")) %>%
     addLegend("bottomright", pal = palCover, values = c("Urban", "Suburban", "Rural", "Forest", "Open water", "Wetland", "Barren/shrubland"),
               #values = c("Urban", "Suburban", "Rural/Ag", "Forest", "Open water", "Wetland", "Barren/shrubland"),
               title = "Land cover",
               layerId = "Land Cover",
               #labFormat = labelFormat(prefix = "$"),
               opacity = 1) %>%
-    addLayersControl(overlayGroups = c("Land Cover", "Sites"),
+    hideGroup(c('Jan. 2023, night heat index', "Jan. 2023, day heat index",
+                "Jul. 2023, night heat index", "Jul. 2023, day heat index")) %>%
+    addLayersControl(overlayGroups = c("Land Cover", "Sites", "Jan. 2023, night heat index", "Jan. 2023, day heat index",
+                                       "Jul. 2023, night heat index", "Jul. 2023, day heat index"),
                      options = layersControlOptions(collapsed = TRUE))
 }
 
