@@ -8,6 +8,68 @@ server <- function(input, output, session) {
     react_map()
   })
   
+  # Update map layers based on user selection
+  observe({
+    leafletProxy("map") %>%
+      clearImages() %>%
+      clearControls()
+      # addRasterImage(landCover, group = "Land Cover",
+      #                colors = c("#b50101", "#e8d1d2",  "#cb9147", "darkgreen", "skyblue1", "steelblue3", "wheat"))
+    
+    if ("landCover" %in% input$layers) {
+      leafletProxy("map") %>%
+        addRasterImage(landCover, group = "Land Cover",
+                       colors = c("#b50101", "#e8d1d2",  "#cb9147", "darkgreen", "skyblue1", "steelblue3", "wheat")) %>%
+        addLegend("bottomright", pal = palCover, values = c("Urban", "Suburban", "Rural", "Forest", "Open water", "Wetland", "Barren/shrubland"),
+                  title = "Land cover",
+                  layerId = "Land Cover",
+                  opacity = 1)
+    }
+
+    if ("janDay" %in% input$layers) {
+      leafletProxy("map") %>%
+        addRasterImage(jan_day, group = "Jan. 2023, avg. day temps", 
+                       colorNumeric(c("#191970", "#007BFF",  "#2E86C1","#FFEC8B", "#ff7f00", "#D25223", "#FF5733"), 
+                                    values(jan_day),  na.color = "transparent")) %>%
+         addLegend("bottomright", pal = colorNumeric(c("#191970", "#007BFF",  "#2E86C1","#FFEC8B", "#ff7f00", "#D25223", "#FF5733"),
+                                                     values(jan_day),  na.color = "transparent"), 
+                   values = values(jan_day), title = "Jan day temps")
+    }
+    
+    if ("janNight" %in% input$layers) {
+      leafletProxy("map") %>%
+        addRasterImage(jan_night, group = "Jan. 2023, avg. night temps", 
+                       colorNumeric(c("#191970", "#007BFF",  "#2E86C1","#FFEC8B", "#ff7f00", "#D25223", "#FF5733"), 
+                                    values(jan_night),  na.color = "transparent")) %>%
+        addLegend("bottomright", pal = colorNumeric(c("#191970", "#007BFF",  "#2E86C1","#FFEC8B", "#ff7f00", "#D25223", "#FF5733"),
+                                                    values(jan_night),  na.color = "transparent"), 
+                  values = values(jan_night), title = "Jan night temps")
+    }
+    
+    if ("julDay" %in% input$layers) {
+      leafletProxy("map") %>%
+        addRasterImage(jul_day, group = "Jul. 2023, avg. day temps", 
+                       colorNumeric(c("#191970", "#007BFF",  "#2E86C1","#FFEC8B", "#ff7f00", "#D25223", "#FF5733"), 
+                                    values(jul_day),  na.color = "transparent")) %>%
+        addLegend("bottomright", pal = colorNumeric(c("#191970", "#007BFF",  "#2E86C1","#FFEC8B", "#ff7f00", "#D25223", "#FF5733"),
+                                                    values(jul_day),  na.color = "transparent"), 
+                  values = values(jul_day), title = "July day temps")
+    }
+    
+    if ("julNight" %in% input$layers) {
+      leafletProxy("map") %>%
+        addRasterImage(jul_night, group = "Jul. 2023, avg. night temps", 
+                       colorNumeric(c("#191970", "#007BFF",  "#2E86C1","#FFEC8B", "#ff7f00", "#D25223", "#FF5733"), 
+                                    values(jul_night),  na.color = "transparent")) %>%
+        addLegend("bottomright", pal = colorNumeric(c("#191970", "#007BFF",  "#2E86C1","#FFEC8B", "#ff7f00", "#D25223", "#FF5733"),
+                                                    values(jul_night),  na.color = "transparent"), 
+                  values = values(jul_night), title = "Jul night temps")
+    }
+  })
+  
+  # Create dynamic legend-------------------
+  
+  
   # reactive vals--------------
   # to tell users that they have selected a site, and which it is
   sid <- reactiveVal()
@@ -60,6 +122,8 @@ server <- function(input, output, session) {
        updateSelectInput(inputId = "year", selected = " ")
        updateSelectInput(inputId = "month", selected = " ")
        updateSelectInput(inputId = "day", selected = " ")
+       updateDateRangeInput(inputId = "dateRangeSelect", label = "Date range", min = "2012-04-01", max = "2023-12-31",
+                            start = "2023-01-01", end = "2023-12-31")
        updateSelectInput(inputId = "filterSpace2", selected = " ")
        
      } else if(input$filterSpace == "Land cover") {
@@ -87,6 +151,8 @@ server <- function(input, output, session) {
        updateSelectInput(inputId = "year", selected = " ")
        updateSelectInput(inputId = "month", selected = " ")
        updateSelectInput(inputId = "day", selected = " ")
+       updateDateRangeInput(inputId = "dateRangeSelect", label = "Date range", min = "2012-04-01", max = "2023-12-31",
+                            start = "2023-01-01", end = "2023-12-31")
        updateSelectInput(inputId = "filterSpace2", selected = " ")
 
      }
@@ -166,17 +232,100 @@ server <- function(input, output, session) {
     
   })
   
+  # observeEvent(input$filterTime, {
+  #   
+  #   shinyjs::disable("filterData")
+  #   
+  # })
+  
+  # timeSelectUI-------------
+  output$timeSelectUI <- renderUI({
+    
+    req(
+      isTruthy(sid()) || isTruthy(cover())
+    )
+    
+    tagList(
+      uiOutput("yearSelect"),
+      uiOutput("monthSelect"),
+      uiOutput("daySelect"),
+      uiOutput("dateRange")
+    )
+    
+  })
+  
+  output$yearSelect <- renderUI({
+    
+    req(input$filterTime == "Year" || input$filterTime == "Month" || input$filterTime == "Day")
+    if(spaceFilter() == "site") {
+      yearChoices <- unique(sidData()$year)
+    } else {
+      yearChoices <- c(2012:2023)
+    }
+    req(input$filterTime != " ")
+    selectInput(inputId = "year", label = "Select year", choices = c("", sort(yearChoices, decreasing = TRUE)))
+    
+  })
+  
+  output$monthSelect <- renderUI({
+    
+    req(input$year)
+    req(input$filterTime == "Month" || input$filterTime == "Day")
+    if(spaceFilter() == "site") {
+      monthChoices <- sidData() %>% filter(year == input$year)
+      monthChoices <- month.abb[sort(unique(monthChoices$month))]
+    } else {
+      if(input$year == 2012) {
+        monthChoices <- month.abb[4:12] 
+      } else{
+        monthChoices <- month.abb[1:12]
+      }
+    }
+    
+    selectInput(inputId = "month", label = "Select month", choices = c("", monthChoices))
+    
+  })
+  
+  output$daySelect <- renderUI({
+    
+    req(input$year)
+    req(input$month)
+    req(input$filterTime == "Day")
+    if(spaceFilter() == "site") {
+      dayChoices <- siteMonthData(sidData(), yearSelect = input$year, monthSelect = match(input$month, month.abb))
+      dayChoices <- sort(unique(dayChoices$day))
+    } else {
+      dayChoices <- days %>% filter(year == input$year, month == input$month)
+      dayChoices <- 1:dayChoices$day
+    }
+    
+    selectInput(inputId = "day", label = "Select day", choices = c("", dayChoices))
+    
+  })
+  
+  output$dateRange <- renderUI ({
+    
+    req(input$filterTime == "Date range")
+    
+    tagList(
+      dateRangeInput(inputId = "dateRangeSelect", label = "Date range", min = "2012-04-01", max = "2023-12-31",
+                     start = "2023-01-01", end = "2023-12-31"),
+      helpText("Select date range less than one month")
+    )
+    
+  })
+  
   #add selection UI------------------
   output$addSelectionUI <- renderUI({
 
     wellPanel(
       tagList(
         fluidRow(
-          shinyjs::useShinyjs(),
           column(6,
-                 downloadButton(outputId = "download"),
-                 br(),
                  checkboxInput(inputId = "addSelect", label = "Compare additional location(s)", value = FALSE),
+                 #br(),
+                 downloadButton(outputId = "download", label = "Download data"),
+                 br(),
                  br(),
                  actionButton("clear", "Clear selection(s)")),
           column(6,
@@ -280,81 +429,6 @@ server <- function(input, output, session) {
   })
   
   
-  # timeSelectUI-------------
-  output$timeSelectUI <- renderUI({
-    
-    req(
-      isTruthy(sid()) || isTruthy(cover())
-      )
-    
-    tagList(
-      uiOutput("yearSelect"),
-      uiOutput("monthSelect"),
-      uiOutput("daySelect"),
-      uiOutput("dateRange")
-    )
-   
-  })
-  
-  output$yearSelect <- renderUI({
-    
-    req(input$filterTime == "Year" || input$filterTime == "Month" || input$filterTime == "Day")
-    if(spaceFilter() == "site") {
-      yearChoices <- unique(sidData()$year)
-    } else {
-      yearChoices <- c(2012:2023)
-    }
-    req(input$filterTime != " ")
-    selectInput(inputId = "year", label = "Select year", choices = c("", sort(yearChoices, decreasing = TRUE)))
-    
-  })
-  
-  output$monthSelect <- renderUI({
-    
-    req(input$year)
-    req(input$filterTime == "Month" || input$filterTime == "Day")
-    if(spaceFilter() == "site") {
-      monthChoices <- sidData() %>% filter(year == input$year)
-      monthChoices <- month.abb[sort(unique(monthChoices$month))]
-    } else {
-      if(input$year == 2012) {
-        monthChoices <- month.abb[4:12] 
-      } else{
-        monthChoices <- month.abb[1:12]
-      }
-    }
-    
-    selectInput(inputId = "month", label = "Select month", choices = c("", monthChoices))
-  
-  })
-  
-  output$daySelect <- renderUI({
-    
-    req(input$year)
-    req(input$month)
-    req(input$filterTime == "Day")
-    if(spaceFilter() == "site") {
-      dayChoices <- siteMonthData(sidData(), yearSelect = input$year, monthSelect = match(input$month, month.abb))
-      dayChoices <- sort(unique(dayChoices$day))
-    } else {
-      dayChoices <- days %>% filter(year == input$year, month == input$month)
-      dayChoices <- 1:dayChoices$day
-    }
-    
-    selectInput(inputId = "day", label = "Select day", choices = c("", dayChoices))
-    
-  })
-  
-  output$dateRange <- renderUI ({
-    
-    req(input$filterTime == "Date range")
-    
-    tagList(
-      dateRangeInput(inputId = "dateRangeSelect", label = "Date range", start = "2012-04-01", end = "2023-12-31"),
-      helpText("Select date range less than one month")
-    )
-    
-  })
   
   # create data-----------------
   rv <- reactiveValues(
@@ -364,38 +438,38 @@ server <- function(input, output, session) {
 
   )
   # make filterData button---------------
-  # shinyjs::disable("filterData")
+  
   # observeEvent(ignoreInit = TRUE, list(input$year, input$month, input$day, input$dateRangeSelect), {
-  #   
+  # 
   #   if(input$filterTime == "Year") {
-  #     
+  # 
   #     req(input$year)
   #     shinyjs::enable("filterData")
-  #     
+  # 
   #   } else if(input$filterTime == "Month") {
-  #     
+  # 
   #     req(input$month)
   #     shinyjs::enable("filterData")
-  #     
+  # 
   #   } else if(input$filterTime == "Day") {
-  #     
+  # 
   #     req(input$day)
   #     shinyjs::enable("filterData")
-  #     
+  # 
   #   } else if(input$filterTime == "Date range") {
-  #     
+  # 
   #     print("date range")
   #     validate(
   #       need(difftime(input$dateRangeSelect[2], input$dateRangeSelect[1], "days") < 31, "Date range is greater than one month"
   #       ))
   #     shinyjs::enable("filterData")
-  #     
+  # 
   #   }
-  #   
   # })
+
   ## dat1---------------
   observeEvent(ignoreInit = TRUE, list(input$year, input$month, input$day, input$dateRangeSelect), {
-  #observeEvent(ignoreInit = TRUE, input$filterData, {
+  #observeEvent(input$filterData, {
     
     print("creating dat 1")
     
@@ -408,35 +482,48 @@ server <- function(input, output, session) {
     if(input$filterTime == "Year") {
       
       req(input$year)
-      rv$dat1 <- createSiteYearData(siteType = input$filterSpace, dat = dat, yearSelect = input$year, landLabel = landLabel1)
-
+      withProgress(message = "Creating data", value = 0, detail = "0%", {
+        rv$dat1 <- createSiteYearData(siteType = input$filterSpace, dat = dat, yearSelect = input$year, landLabel = landLabel1)
+      })
+      
     } else if(input$filterTime == "Month") {
       
       req(input$month)
-      month = which(input$month == month.abb)[[1]]
-      rv$dat1 <- createSiteMonthData(siteType = input$filterSpace, dat = dat, yearSelect = input$year, monthSelect = month, landLabel = landLabel1)
+      withProgress(message = "Creating data", value = 0, detail = "0%", {
+        month = which(input$month == month.abb)[[1]]
+        rv$dat1 <- createSiteMonthData(siteType = input$filterSpace, dat = dat, yearSelect = input$year, monthSelect = month, landLabel = landLabel1)
+      })
       
     } else if(input$filterTime == "Day") {
       
       req(input$day)
-      month = which(input$month == month.abb)[[1]]
-      rv$dat1 <- createSiteDayData(siteType = input$filterSpace, dat = dat, yearSelect = input$year, monthSelect = month, daySelect = input$day, landLabel = landLabel1)
+      withProgress(message = "Creating data", value = 0, detail = "0%", {
+        month = which(input$month == month.abb)[[1]]
+        rv$dat1 <- createSiteDayData(siteType = input$filterSpace, dat = dat, yearSelect = input$year, monthSelect = month, daySelect = input$day, landLabel = landLabel1)
+      })
       
     } else if(input$filterTime == "Date range") {
       
       req(input$dateRangeSelect)
-      rv$dat1 <- createDateRangeData(siteType = input$filterSpace, dat = dat, startDate = input$dateRangeSelect[1],
-                                     endDate = input$dateRangeSelect[2], landLabel = landLabel1)
+      validate(
+        need(difftime(input$dateRangeSelect[2], input$dateRangeSelect[1], "days") < 31, "Date range is greater than one month"
+        ))
+      ##TODO also need dateRangeSelect[2] to be after [1]
+      withProgress(message = "Creating data", value = 0, detail = "0%", {
+        rv$dat1 <- createDateRangeData(siteType = input$filterSpace, dat = dat, startDate = input$dateRangeSelect[1],
+                                       endDate = input$dateRangeSelect[2], landLabel = landLabel1)
+      })
+      
     }
     
-    #print("dat1")
+    print("dat1")
     print(head(rv$dat1))
   
   })
   
   ##dat2-----------------
   
-  observeEvent(ignoreInit = TRUE, list(input$year, rv$dat1, input$landCover2, sid2()), {
+  observeEvent(ignoreInit = TRUE, list(input$year, input$month, input$day, input$dateRangeSelect, rv$dat1, input$landCover2, sid2()), {
     
     req(
         isTruthy(rv$dat1),
@@ -454,25 +541,34 @@ server <- function(input, output, session) {
       
       if(input$filterTime == "Year") {
         
-        rv$dat2 <- createSiteYearData(siteType = input$filterSpace2, dat = dat, yearSelect = input$year, landLabel = landLabel2)
-        
+        withProgress(message = "Creating second data set", value = 0, detail = "0%", {
+          rv$dat2 <- createSiteYearData(siteType = input$filterSpace2, dat = dat, yearSelect = input$year, landLabel = landLabel2)
+        })
+ 
       } else if(input$filterTime == "Month") {
         
         req(input$month)
-        month = which(input$month == month.abb)[[1]]
-        rv$dat2 <- createSiteMonthData(siteType = input$filterSpace2, dat = dat, yearSelect = input$year, monthSelect = month, landLabel = landLabel2)
-        
+        withProgress(message = "Creating second data set", value = 0, detail = "0%", {
+          month = which(input$month == month.abb)[[1]]
+          rv$dat2 <- createSiteMonthData(siteType = input$filterSpace2, dat = dat, yearSelect = input$year, monthSelect = month, landLabel = landLabel2)
+        })
+       
       } else if(input$filterTime == "Day") {
         
         req(input$day)
-        month = which(input$month == month.abb)[[1]]
-        rv$dat2 <- createSiteDayData(siteType = input$filterSpace2, dat = dat, yearSelect = input$year, monthSelect = month, daySelect = input$day, landLabel = landLabel2)
-        
+        withProgress(message = "Creating second data set", value = 0, detail = "0%", {
+          month = which(input$month == month.abb)[[1]]
+          rv$dat2 <- createSiteDayData(siteType = input$filterSpace2, dat = dat, yearSelect = input$year, monthSelect = month, daySelect = input$day, landLabel = landLabel2)
+        })
+       
       } else if(input$filterTime == "Date range") {
         
         req(input$dateRangeSelect)
-        rv$dat2 <- createDateRangeData(siteType = input$filterSpace2, dat = dat, startDate = input$dateRangeSelect[1],
-                                       endDate = input$dateRangeSelect[2], landLabel = landLabel2)
+        withProgress(message = "Creating second data set", value = 0, detail = "0%", {
+          rv$dat2 <- createDateRangeData(siteType = input$filterSpace2, dat = dat, startDate = input$dateRangeSelect[1],
+                                         endDate = input$dateRangeSelect[2], landLabel = landLabel2)
+        })
+        
       }
     
     #print("dat2")
@@ -487,26 +583,46 @@ server <- function(input, output, session) {
     req(rv$dat1)
     print("plotUI")
    
+    # tagList(
+    #   fluidRow(
+    #     column(5,
+    #            uiOutput("addSelectionUI")),
+    #     column(7,
+    #            fluidRow(
+    #              column(6,
+    #                     radioButtons("tempLabel", "Degree units display", choices = c("Celsius", "Fahrenheit"),
+    #                                  selected = "Celsius", inline = TRUE))),
+    #            if(input$filterTime == "Year") {
+    #              withSpinner(plotlyOutput("yearFig"), type = 8)
+    #              } else if(input$filterTime == "Month") {
+    #                withSpinner(plotlyOutput("monthFig"), type = 8)
+    #                } else if(input$filterTime == "Day") {
+    #                  withSpinner(plotlyOutput("dayFig"), type = 8)
+    #                  } else if(input$filterTime == "Date range") {
+    #                    withSpinner(plotlyOutput("rangeFig"), type = 8)
+    #                    })
+    #     )
+    #   )
+    
     tagList(
       fluidRow(
-        column(6,
-               radioButtons("tempLabel", "Degree units display", choices = c("Celsius", "Fahrenheit"), selected = "Celsius", inline = TRUE))
-        ),
-      if(input$filterTime == "Year") {
-        #uiOutput("yearFig")
-        withSpinner(plotlyOutput("yearFig"), type = 8)
-      } else if(input$filterTime == "Month") {
-        #uiOutput("monthFig")
-        withSpinner(plotlyOutput("monthFig"), type = 8)
-      } else if(input$filterTime == "Day") {
-        #uiOutput("dayFigure")
-        withSpinner(plotlyOutput("dayFig"), type = 8)
-      } else if(input$filterTime == "Date range") {
-        print("plotly range fig")
-        withSpinner(plotlyOutput("rangeFig"), type = 8)
-      },
-      br(),
-      uiOutput("addSelectionUI")
+        column(8,
+               fluidRow(
+                 column(6,
+                        radioButtons("tempLabel", "Degree units display", choices = c("Celsius", "Fahrenheit"),
+                                     selected = "Celsius", inline = TRUE))),
+               if(input$filterTime == "Year") {
+                 withSpinner(plotlyOutput("yearFig"), type = 8)
+               } else if(input$filterTime == "Month") {
+                 withSpinner(plotlyOutput("monthFig"), type = 8)
+               } else if(input$filterTime == "Day") {
+                 withSpinner(plotlyOutput("dayFig"), type = 8)
+               } else if(input$filterTime == "Date range") {
+                 withSpinner(plotlyOutput("rangeFig"), type = 8)
+               }),
+        column(4,
+               uiOutput("addSelectionUI"))
+      )
     )
     
   })
@@ -529,9 +645,11 @@ server <- function(input, output, session) {
 
   ### year plot ---------
   output$yearFig <- renderPlotly({
-    
+      
+      print("inside year plot")
+      print(Sys.time())
       req(input$filterTime == "Year")
-    req(input$year)
+      req(input$year)
       req(rv$dat1)
       print("yearFig")
       dat1df <- rv$dat1
@@ -558,8 +676,11 @@ server <- function(input, output, session) {
           landLabel1 = input$landCover
         }
         
+        print("making plot")
+        print(Sys.time())
         yearPlot <- completeYearPlot(dat1 = convertDat1, title = title, landLabel1 = landLabel1, yLabel = yLabel, compare = FALSE)
-      } else {
+        print(Sys.time())
+        } else {
         #print("dat 2 is not null")
         dat2df <- req(rv$dat2)
           if(deg == "Celsius") {
@@ -1085,10 +1206,13 @@ server <- function(input, output, session) {
     updateSelectInput(inputId = "filterSpace", selected = " ")
     updateSelectInput(inputId = "filterTime", selected = " ")
     updateSelectInput(inputId = "landCover", selected = " ")
+    updateSelectInput(inputId = "landCover2", selected = " ")
     updateSelectInput(inputId = "year", selected = " ")
     updateSelectInput(inputId = "month", selected = " ")
     updateSelectInput(inputId = "day", selected = " ")
     updateSelectInput(inputId = "filterSpace2", selected = " ")
+    updateDateRangeInput(inputId = "dateRangeSelect", label = "Date range", min = "2012-04-01", max = "2023-12-31",
+                         start = "2023-01-01", end = "2023-12-31")
     updateCheckboxInput(inputId = "addSelect", value = FALSE)
     leafletProxy("map") %>%
       clearGroup("siteData") %>%

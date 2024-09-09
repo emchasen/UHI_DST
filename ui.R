@@ -1,41 +1,54 @@
 
 ui <- fluidPage(
   
+  useShinyjs(),
   tags$head(
     tags$link(rel = "stylesheet", type = "text/css", href = "style.css")
   ),
   
   titlePanel("Dane County Urban Heat Island Exploration"),
   h4("Observe temperature patterns by site or land cover."),
-  leafletOutput("map", height = 350) %>%
-    withSpinner(type = 3,
-                color.background = "white"),
   wellPanel(
     fluidRow(
-      column(6,
-             selectInput(inputId = "filterSpace", label = "Filter data spatially by:", choices = c(" ", "Site", "Land cover"), selected = " "),
-             uiOutput("siteSelectUI"),
-             uiOutput("landCoverSelectUI"),
-             # shinyjs::useShinyjs(),
-             # actionButton("filterData", "Make plot")
-             ),
-      column(6,
-             uiOutput("filterTimeUI")))),
-     
+      column(4,
+             fluidRow(
+               column(5,
+                      selectInput(inputId = "filterSpace", label = "Filter data spatially by:", choices = c(" ", "Site", "Land cover"), selected = " "),
+                      uiOutput("siteSelectUI"),
+                      uiOutput("landCoverSelectUI")),
+               column(7,
+                      uiOutput("filterTimeUI")))),
+      column(6, 
+             leafletOutput("map", height = 350) %>%
+               withSpinner(type = 3,
+                           color.background = "white")),
+      column(2, 
+             radioButtons("layers", "Map layers:",
+                           choices = c("Land cover" = "landCover",
+                                       "Jan 2023 day" = "janDay",
+                                       "Jan 2023 night" = "janNight",
+                                       "Jul 2023 day" = "julDay",
+                                       "Jul 2023 night" = "julNight"),
+                          selected = "landCover"),
+             uiOutput("legend"))
+      )
+  ),
   hr(),
-  uiOutput("dateRangeText"),
-  uiOutput("plotUI") #%>% withSpinner()#,
-  # wellPanel(
-  #   shinyjs::useShinyjs(),
-  #   fluidRow(
-  #     column(6,
-  #            checkboxInput(inputId = "addSelect", label = "Compare additional location", value = FALSE)
-  #            #actionButton("clear", "Clear selection(s)")
-  #     ),
-  #     column(6,
-  #            uiOutput("filterSpace2UI"),
-  #            uiOutput("siteSelect2UI"),
-  #            uiOutput("landCoverSelect2UI"))
-  #   )
-  #)
+  #uiOutput("dateRangeText"),
+  tags$head(
+    tags$style(
+      HTML(".shiny-notification {
+           height: 100px;
+           width: 800px;
+           position:fixed;
+           top: calc(50% - 50px);
+           left: calc(50% - 400px);
+           font-size: 250%;
+           text-align: center;
+           }
+           "
+      )
+    )
+  ),
+  uiOutput("plotUI") 
 )

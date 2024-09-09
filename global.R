@@ -6,7 +6,8 @@ library(sf)
 library(leaflet)
 library(plotly)
 library(terra)
-#library(lubridate)
+library(fst)
+library(shinyjs)
 library(shinycssloaders)
 
 
@@ -16,7 +17,10 @@ sites <- readxl::read_excel("data/sensorAttributes.xlsx") %>%
                                     is.na(category3) ~ paste(cat, category1, category2, sep = ", "),
                                     TRUE ~ paste(cat, category1, category2, category3, sep = ", ")))
 
-dat <- read_csv("data/partialDataLongDate.csv.gz") %>%
+# dat <- read_csv("data/partialDataLongDate.csv.gz") %>%
+#   left_join(sites)
+
+dat <- read_fst("data/fast_dat.fst") %>%
   left_join(sites)
 
 # dat <- read_csv("data/sampleDat.csv.gz") %>%
@@ -52,32 +56,32 @@ base_map <- function() {
   leaflet() %>%
     addTiles() %>%
     addMapPane("sites", 450) %>%
-    addMapPane("landCover", 423) %>%
+    #addMapPane("landCover", 423) %>%
     addCircles(data = sites_sf, 
                lng = ~lon, lat = ~lat,
                opacity = 0.7,
                color = "black",
                group = "Sites") %>%
     setView(lat = 43.08, lng = -89.37, zoom = 10) %>%
-    addProviderTiles("USGS.USImageryTopo")  %>%
-    addRasterImage(jan_night, group = "Jan. 2023, night heat index") %>%
-    addRasterImage(jan_day, group = "Jan. 2023, day heat index") %>%
-    addRasterImage(jul_night, group = "Jul. 2023, night heat index") %>%
-    addRasterImage(jul_day, group = "Jul. 2023, day heat index") %>%
-    addRasterImage(landCover, group = "Land Cover",
-                   colors = c("#b50101", "#e8d1d2",  "#cb9147", "darkgreen", "skyblue1", "steelblue3", "wheat")) %>%
-    addLegend("bottomright", pal = palCover, values = c("Urban", "Suburban", "Rural", "Forest", "Open water", "Wetland", "Barren/shrubland"),
-              #values = c("Urban", "Suburban", "Rural/Ag", "Forest", "Open water", "Wetland", "Barren/shrubland"),
-              title = "Land cover",
-              layerId = "Land Cover",
-              #labFormat = labelFormat(prefix = "$"),
-              opacity = 1) %>%
-    hideGroup(c('Jan. 2023, night heat index', "Jan. 2023, day heat index",
-                "Jul. 2023, night heat index", "Jul. 2023, day heat index")) %>%
-    addLayersControl(overlayGroups = c("Land Cover", "Sites", "Jan. 2023, night heat index", "Jan. 2023, day heat index",
-                                       "Jul. 2023, night heat index", "Jul. 2023, day heat index"),
-                     options = layersControlOptions(collapsed = TRUE))
+    addProviderTiles("USGS.USImageryTopo")  #%>%
+    # addRasterImage(jan_night, group = "Jan. 2023, avg. night temps", colors = pal01night) %>%
+    # addLegend("bottomright", pal = pal01night, values = values(jan_night), title = "Jan night temps") %>%
+    # addRasterImage(jan_day, group = "Jan. 2023, avg. day temps", colors = pal01day) %>%
+    # addRasterImage(jul_night, group = "Jul. 2023, avg. night temps", colors = pal07night) %>%
+    # addRasterImage(jul_day, group = "Jul. 2023, avg. day temps", colors = pal07day) %>%
+    # addRasterImage(landCover, group = "Land Cover",
+    #                colors = c("#b50101", "#e8d1d2",  "#cb9147", "darkgreen", "skyblue1", "steelblue3", "wheat")) %>%
+    # addLegend("bottomright", pal = palCover, values = c("Urban", "Suburban", "Rural", "Forest", "Open water", "Wetland", "Barren/shrubland"),
+    #           title = "Land cover",
+    #           layerId = "Land Cover",
+    #           opacity = 1) %>%
+    # hideGroup(c('Jan. 2023, avg. night temps', "Jan. 2023, avg. day temps",
+    #             "Jul. 2023, avg. night temps", "Jul. 2023, avg. day temps")) %>%
+    # addLayersControl(overlayGroups = c("Land Cover", "Sites"), #"Jan. 2023, avg. night temps", "Jan. 2023, avg. day temps",
+    #                                    #"Jul. 2023, avg. night temps", "Jul. 2023, avg. day temps"),
+    #                  options = layersControlOptions(collapsed = TRUE))
 }
+
 
 palSite <- colorFactor(palette = c("#cb9147", "#e8d1d2", "#b50101"), domain = sites$cat)
 palCover <- colorFactor(palette = c("#b50101", "#e8d1d2",  "#cb9147", "darkgreen", "skyblue1", "steelblue3", "wheat"),
@@ -96,25 +100,37 @@ siteData <- function(dat, site) {
 
 createSiteYearData <- function(siteType, dat, yearSelect, landLabel) {
   
+  print("time start")
+  print(Sys.time())
   # filter data and configure months
   if(siteType == "Site") {
     filteredDat <- dat %>% filter(sid == landLabel,
                           year == yearSelect) %>%
       mutate(monthName = month.abb[month])
+    # print("inside site")
+    # print(Sys.time())
     filteredDat$monthName = fct_relevel(filteredDat$monthName, "Jan", "Feb", "Mar", "Apr", "May",
                                  "Jun", "Jul", "Aug", "Sep", "Oct",
                                  "Nov", "Dec")
+    #print(Sys.time())
     #return(filteredDat)
   } else if(siteType == "Land cover") {
     filteredDat <- dat %>% filter(cat == landLabel,
                           year == yearSelect) %>%
       mutate(monthName = month.abb[month])
+    print("inside land cover")
+    print(Sys.time())
     filteredDat$monthName = fct_relevel(filteredDat$monthName, "Jan", "Feb", "Mar", "Apr", "May",
                                 "Jun", "Jul", "Aug", "Sep", "Oct",
                                 "Nov", "Dec")
+    #print(Sys.time())
   }
   
+  # print("before drop na")
+  # print(Sys.time())
   filteredDat %>% drop_na(tempC)
+  # print("after drop na")
+  # print(Sys.time())
 
 }
 
