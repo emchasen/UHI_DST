@@ -8,7 +8,7 @@ server <- function(input, output, session) {
     react_map()
   })
   
-  # Update map layers based on user selection
+  # view map layers based on user selection--------------------
   observe({
     leafletProxy("map") %>%
       clearImages() %>%
@@ -483,6 +483,7 @@ server <- function(input, output, session) {
       
       req(input$year)
       withProgress(message = "Creating data", value = 0, detail = "0%", {
+        ##TODO how to incProgress https://shiny.posit.co/r/articles/build/progress/
         rv$dat1 <- createSiteYearData(siteType = input$filterSpace, dat = dat, yearSelect = input$year, landLabel = landLabel1)
       })
       
@@ -646,12 +647,9 @@ server <- function(input, output, session) {
   ### year plot ---------
   output$yearFig <- renderPlotly({
       
-      print("inside year plot")
-      print(Sys.time())
       req(input$filterTime == "Year")
       req(input$year)
       req(rv$dat1)
-      print("yearFig")
       dat1df <- rv$dat1
       
       deg <- req(input$tempLabel)
@@ -676,10 +674,8 @@ server <- function(input, output, session) {
           landLabel1 = input$landCover
         }
         
-        print("making plot")
-        print(Sys.time())
         yearPlot <- completeYearPlot(dat1 = convertDat1, title = title, landLabel1 = landLabel1, yLabel = yLabel, compare = FALSE)
-        print(Sys.time())
+        
         } else {
         #print("dat 2 is not null")
         dat2df <- req(rv$dat2)
@@ -1193,6 +1189,34 @@ server <- function(input, output, session) {
   #   
   # })
 
+  # download data--------------
+  output$download <- downloadHandler(
+    
+    filename = "UHI_Data_DegC.csv",
+    
+    content = function(file) {
+      
+      # will need site and date and degreeUnit
+      #management1 <- rep(input$simSelect1, nrow(dat1()$data1))
+      df1 <- rv$dat1 %>%
+        mutate(data = "set1")
+      
+      if(is.null(rv$dat2)) {
+        
+        write.csv(df1, file, row.names = FALSE)
+        
+      } else {
+        
+        df2 <- rv$dat2 %>%
+          mutate(data = "set2") %>%
+          bind_rows(df1)
+        
+        write.csv(df2, file, row.names = FALSE)
+      }
+    }
+  )
+  
+  
   # clear--------------------
   observeEvent(input$clear, {
     

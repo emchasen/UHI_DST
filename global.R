@@ -99,38 +99,30 @@ siteData <- function(dat, site) {
 }
 
 createSiteYearData <- function(siteType, dat, yearSelect, landLabel) {
-  
-  print("time start")
-  print(Sys.time())
   # filter data and configure months
   if(siteType == "Site") {
+    incProgress(1/4, detail = "25%")
     filteredDat <- dat %>% filter(sid == landLabel,
                           year == yearSelect) %>%
-      mutate(monthName = month.abb[month])
-    # print("inside site")
-    # print(Sys.time())
+      mutate(monthName = month.abb[month]) 
+    incProgress(3/4, detail = "75%")
     filteredDat$monthName = fct_relevel(filteredDat$monthName, "Jan", "Feb", "Mar", "Apr", "May",
                                  "Jun", "Jul", "Aug", "Sep", "Oct",
                                  "Nov", "Dec")
-    #print(Sys.time())
-    #return(filteredDat)
   } else if(siteType == "Land cover") {
+    incProgress(1/4, detail = "25%")
     filteredDat <- dat %>% filter(cat == landLabel,
                           year == yearSelect) %>%
       mutate(monthName = month.abb[month])
-    print("inside land cover")
-    print(Sys.time())
+    incProgress(3/4, detail = "75%")
     filteredDat$monthName = fct_relevel(filteredDat$monthName, "Jan", "Feb", "Mar", "Apr", "May",
                                 "Jun", "Jul", "Aug", "Sep", "Oct",
                                 "Nov", "Dec")
-    #print(Sys.time())
   }
   
-  # print("before drop na")
-  # print(Sys.time())
-  filteredDat %>% drop_na(tempC)
-  # print("after drop na")
-  # print(Sys.time())
+  filteredDat %>% 
+    drop_na(tempC) %>%
+    select(c(sid, cat, lat, lon, monthName, year, tempC))
 
 }
 
@@ -140,22 +132,34 @@ createSiteMonthData <- function(siteType, dat, yearSelect, monthSelect, landLabe
   # filter data and configure months
   if(siteType == "Site") {
     filteredDat <- dat %>% 
-      filter(sid == landLabel,
-             year == yearSelect,
-             month == monthSelect) 
+      filter(sid == landLabel)
+    incProgress(1/4, detail = "25%")
+    filteredDat <- filteredDat %>%
+      filter(year == yearSelect,
+             month == monthSelect) %>%
+      group_by(day, month, sid) %>%
+      summarise(meanTemp = round(mean(tempC, na.rm = TRUE),2),
+                minTemp = round(min(tempC, na.rm = TRUE),2),
+                maxTemp = round(max(tempC, na.rm = TRUE),2)) %>%
+      rename(location = sid)
+    incProgress(3/4, detail = "75%")
     #return(filteredDat)
   } else if(siteType == "Land cover") {
     filteredDat <- dat %>% 
-      filter(cat == landLabel,
-             year == yearSelect,
-             month == monthSelect) 
+      filter(cat == landLabel)
+    incProgress(1/4, detail = "25%")
+    filteredDat <- filteredDat %>%
+      filter(year == yearSelect,
+             month == monthSelect) %>%
+      group_by(day, month, cat) %>%
+      summarise(meanTemp = round(mean(tempC, na.rm = TRUE),2),
+                minTemp = round(min(tempC, na.rm = TRUE),2),
+                maxTemp = round(max(tempC, na.rm = TRUE),2)) %>%
+      rename(location = cat)
+    incProgress(3/4, detail = "75%")
   }
   
-  filteredDat %>% 
-    group_by(day) %>%
-    summarise(meanTemp = round(mean(tempC, na.rm = TRUE),2),
-              minTemp = round(min(tempC, na.rm = TRUE),2),
-              maxTemp = round(max(tempC, na.rm = TRUE),2)) 
+  return(filteredDat) 
   
 }
 
@@ -163,27 +167,44 @@ createSiteDayData <- function(siteType, dat, yearSelect, monthSelect, daySelect,
   
   # filter data and configure months
   if(siteType == "Site") {
+    incProgress(1/4, detail = "25%")
     filteredDat <- dat %>% 
       filter(sid == landLabel)
-    #return(filteredDat)
+    incProgress(2/4, detail = "50%")
+    filteredDat <- filteredDat %>% 
+      filter(year == yearSelect,
+             month == monthSelect, 
+             day == daySelect) 
+    incProgress(3/4, detail = "75%")
+    filteredDat <- filteredDat %>%
+      group_by(Time1, sid, month, day, year) %>%
+      summarise(meanTemp = mean(tempC, na.rm = TRUE),
+                sdTemp = sd(tempC, na.rm = TRUE),
+                count = n(),
+                seTemp = sdTemp/sqrt(count)) %>%
+      rename(location = sid) %>%
+      select(location, month, day, year, Time1, meanTemp, sdTemp, seTemp)
   } else if(siteType == "Land cover") {
+    incProgress(1/4, detail = "25%")
     filteredDat <- dat %>% 
-      filter(cat == landLabel)#,
-             # year == yearSelect,
-             # month == monthSelect,
-             # day == daySelect) 
+      filter(cat == landLabel)
+    incProgress(2/4, detail = "50%")
+    filteredDat <- filteredDat %>% 
+      filter(year == yearSelect,
+             month == monthSelect, 
+             day == daySelect) 
+    incProgress(3/4, detail = "75%")
+    filteredDat <- filteredDat %>%
+      group_by(Time1, cat, month, day, year) %>%
+      summarise(meanTemp = mean(tempC, na.rm = TRUE),
+                sdTemp = sd(tempC, na.rm = TRUE),
+                count = n(),
+                seTemp = sdTemp/sqrt(count)) %>%
+      rename(location = cat) %>%
+      select(location, month, day, year, Time1, meanTemp, sdTemp, seTemp)
   }
   
-  filteredDat <- filteredDat %>% 
-    filter(year == yearSelect,
-           month == monthSelect, 
-           day == daySelect) %>%
-    group_by(Time1) %>%
-    summarise(meanTemp = mean(tempC, na.rm = TRUE),
-              sdTemp = sd(tempC, na.rm = TRUE),
-              count = n(),
-              seTemp = sdTemp/sqrt(count))
-    
+  incProgress(7/8, detail = "85%")
   filteredDat$Time <- substr(as.POSIXct(sprintf("%04.0f", filteredDat$Time1), format='%H%M'), 12, 16)
   
   return(filteredDat)
@@ -194,17 +215,29 @@ createDateRangeData <- function(siteType, dat, startDate, endDate, landLabel) {
   
   if(siteType == "Site") {
     filteredDat <- dat %>% 
-      filter(sid == landLabel) %>%
+      filter(sid == landLabel)
+    incProgress(1/4, detail = "25%")
+    filteredDat <- filteredDat %>%
       filter(between(date, startDate, endDate))
+    incProgress(2/4, detail = "50%")
+    sumDat <- filteredDat %>%
+      group_by(time, sid, month, day, year, Time1) %>%
+      summarise(meanTemp = mean(tempC, na.rm = TRUE)) %>%
+      rename(location = sid)
   } else if(siteType == "Land cover") {
     filteredDat <- dat %>% 
-      filter(cat == landLabel) %>%
+      filter(cat == landLabel) 
+    incProgress(1/4, detail = "25%")
+    filteredDat <- filteredDat %>%
       filter(between(date, startDate, endDate))
+    incProgress(2/4, detail = "50%")
+    sumDat <- filteredDat %>%
+      group_by(time, cat, month, day, year, Time1) %>%
+      summarise(meanTemp = mean(tempC, na.rm = TRUE)) %>%
+      rename(location = cat)
   }
   
-  sumDat <- filteredDat %>%
-    group_by(time) %>%
-    summarise(meanTemp = mean(tempC, na.rm = TRUE))
+  return(data.frame(sumDat))
   
 }
 
@@ -274,8 +307,8 @@ completeYearPlot <- function(dat1, dat2 = NULL, title, landLabel1, landLabel2, y
 
 monthPlotSingle <- function(dat, title, landLabel, yLabel) {
   
-  p <- plot_ly(data = dat, x = ~day) %>%
-    add_trace(y =~minTemp, type = 'scatter', mode = 'lines+markers', 
+  p <- plot_ly(data = data.frame(dat), x = ~day) %>%
+    add_trace(y =~minTemp, type = "scatter", mode = 'lines+markers', 
               hoverinfo = "text",
               name = paste(landLabel, "min temp"),
               line = list(color = "#6a5acd", dash = "dash"),
@@ -311,7 +344,7 @@ completeMonthPlot <- function(dat1, dat2 = NULL, title, landLabel1, landLabel2, 
   } else if(compare == TRUE) {
     if(nrow(dat2) > 1) {
       plt <- base_plot %>%
-        add_trace(data = dat2, y =~minTemp, x = ~day, type = 'scatter', mode = 'lines+markers', 
+        add_trace(data = data.frame(dat2), y =~minTemp, x = ~day, type = 'scatter', mode = 'lines+markers', 
                   hoverinfo = "text", 
                   name = paste(landLabel2, "min temp"),
                   line = list(color = "#CA2C92", dash = "dash"),
@@ -346,7 +379,7 @@ completeMonthPlot <- function(dat1, dat2 = NULL, title, landLabel1, landLabel2, 
 dayPlotSingle <- function(datType, dat, title, landLabel, yLabel) {
 
   if(datType == "Site") {
-    p <- plot_ly(data = dat) %>%
+    p <- plot_ly(data = data.frame(dat)) %>%
       add_trace(x = ~Time, y = ~meanTemp, type = 'scatter', mode = 'lines+markers',
                 name = landLabel,
                 line = list(color = "#6a5acd"),
@@ -360,7 +393,7 @@ dayPlotSingle <- function(datType, dat, title, landLabel, yLabel) {
     
   } else if(datType == "Land cover") { 
     
-    p <- plot_ly(data = dat) %>%
+    p <- plot_ly(data = data.frame(dat)) %>%
       add_trace(x = ~Time, y = ~meanTemp, name = landLabel,
                 type = 'scatter', mode = 'lines+markers',
                 line = list(color = "#6a5acd"),
@@ -390,13 +423,13 @@ completeDayPlot <- function(dat1, dat2 = NULL, datType1, datType2, title, landLa
       ##TODO handle the different datTypes
       if(datType2 == "Site") {
         plt <- base_plot %>%
-          add_trace(data = dat2, y = ~meanTemp, x = ~Time, name = landLabel2,
+          add_trace(data = data.frame(dat2), y = ~meanTemp, x = ~Time, name = landLabel2,
                     type = 'scatter', mode = 'lines+markers',
                     hoverinfo = "text",
                     hovertext = ~ round(meanTemp, 1))
       } else if(datType2 == "Land cover") {
         plt <- base_plot %>%
-          add_trace(data = dat2, y = ~meanTemp, x = ~Time, name = landLabel2,
+          add_trace(data = data.frame(dat2), y = ~meanTemp, x = ~Time, name = landLabel2,
                     type = 'scatter', mode = 'lines+markers',
                     hoverinfo = "text",
                     hovertext = ~paste("Mean temp:", round(meanTemp, 1)),
