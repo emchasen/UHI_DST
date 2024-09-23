@@ -23,14 +23,16 @@ ui <- fluidPage(
                withSpinner(type = 3,
                            color.background = "white")),
       column(2, 
-             radioButtons("layers", "Map layers:",
-                           choices = c("Land cover" = "landCover",
-                                       "Jan 2023 day" = "janDay",
-                                       "Jan 2023 night" = "janNight",
-                                       "Jul 2023 day" = "julDay",
-                                       "Jul 2023 night" = "julNight"),
-                          selected = "landCover"),
-             uiOutput("legend"))
+             # radioButtons("layers", "Map layers:",
+             #               choices = c("Land cover" = "landCover",
+             #                           "Jan 2023 day" = "janDay",
+             #                           "Jan 2023 night" = "janNight",
+             #                           "Jul 2023 day" = "julDay",
+             #                           "Jul 2023 night" = "julNight",
+             #                           "None" = "none"),
+             #              selected = "none"),
+             selectInput("layers", "Map layers", choices = layerChoices, selected = "None"),
+             helpText("Month and daytime layers refer to monthly average temperatures (°F) from 2023."))
       )
   ),
   hr(),
@@ -50,5 +52,10 @@ ui <- fluidPage(
       )
     )
   ),
-  uiOutput("plotUI") 
+  #fluidRow(
+   # column(8,
+           uiOutput("plotUI")#),
+    #column(4,
+     #      uiOutput("addSelectionUI"))
+  #)
 )
