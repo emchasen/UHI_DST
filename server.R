@@ -465,12 +465,14 @@ server <- function(input, output, session) {
       }, ignoreInit = TRUE)
       
       cover2(NULL)
+      sid2(NULL)
 
     } else if(input$filterSpace2 == "Land cover") {
       
       leafletProxy("map") %>%
         clearGroup("siteData")
       
+      cover2(NULL)
       sid2(NULL)
       
     }
@@ -480,10 +482,11 @@ server <- function(input, output, session) {
   observeEvent(input$landCover2, {
     
     print("line 440")
-    #if(input$landCover2 != " ") {
+    if(input$landCover2 != " ") {
       landcover <- input$landCover2
       cover2(landcover)
-    #}
+      print(cover2())
+    }
     
   })
 
@@ -533,9 +536,11 @@ server <- function(input, output, session) {
   ###month--------------
   observeEvent(ignoreInit = TRUE, input$month, {
     
-    print("creating month dat 1")
-    req(input$month)
     req(input$filterTime == "Month")
+    req(input$month)
+    print("creating month dat 1")
+    print(input$month)
+    
     
     if(input$filterSpace == "Site") {
       landLabel1 = sid()
@@ -586,14 +591,22 @@ server <- function(input, output, session) {
       landLabel1 = input$landCover
     }
     
+    print(difftime(input$dateRangeSelect[2], input$dateRangeSelect[1], "days"))
+    print(class(input$dateRangeSelect[2]))
     validate(
-      need(difftime(input$dateRangeSelect[2], input$dateRangeSelect[1], "days") < 31, "Date range is greater than one month"
-      ))
-    ##TODO also need dateRangeSelect[2] to be after [1]
+      need(difftime(input$dateRangeSelect[2], input$dateRangeSelect[1], "days") < 31, "Date range is greater than one month")
+      )
+    validate(
+      need(difftime(input$dateRangeSelect[2], input$dateRangeSelect[1], "days") >1, "End date is before start date")
+      )
+    
     withProgress(message = "Creating data", value = 0, detail = "0%", {
       rv$dat1$range <- createDateRangeData(siteType = input$filterSpace, dat = dat, startDate = input$dateRangeSelect[1],
                                      endDate = input$dateRangeSelect[2], landLabel = landLabel1)
     })
+    
+    print(head(rv$dat1$range))
+    return(rv$dat1$range)
     
   })
     
@@ -601,11 +614,12 @@ server <- function(input, output, session) {
   ##dat2-----------------
   #observeEvent(ignoreInit = TRUE, list(input$year, input$month, input$day, input$dateRangeSelect, rv$dat1, input$landCover2, sid2()), {
   ###year-------------------
-  observeEvent(ignoreInit = TRUE, list(input$year, sid2(), cover2()), {
+  observeEvent(ignoreInit = TRUE, list(input$year, sid2(), input$landCover2), {
     
-    req(rv$dat1$year)
+    #req(rv$dat1$year)
     req(input$year)
-    req(isTruthy(sid2()) || isTruthy(cover2())) ##TODO play around with the requirements for dat2
+    req(isTruthy(sid2()) || isTruthy(cover2()))
+    #req(isTruthy(sid2()) || isTruthy(cover2())) ##TODO play around with the requirements for dat2
     req(input$filterTime == "Year")
     req(input$filterSpace2 != " ") ##TODO play around with the requirements for dat2
     
@@ -619,12 +633,13 @@ server <- function(input, output, session) {
       } else if(input$filterSpace2 == "Land cover") {
         landLabel2 <- cover2()
       }
-    
-    
-    print("making year dat 2")
+
     withProgress(message = "Creating second data set", value = 0, detail = "0%", {
       rv$dat2$year <- createSiteYearData(siteType = input$filterSpace2, dat = dat, yearSelect = input$year, landLabel = landLabel2)
     })
+    
+    print(head(rv$dat2$year))
+    return(rv$dat2$year)
     
   })
   
@@ -633,6 +648,7 @@ server <- function(input, output, session) {
     
     req(rv$dat1$month)
     req(input$month)
+    print(input$month)
     req(isTruthy(sid2()) || isTruthy(cover2()))
     req(input$filterTime == "Month")
     req(input$filterSpace2 != " ")
@@ -652,6 +668,9 @@ server <- function(input, output, session) {
       month = which(input$month == month.abb)[[1]]
       rv$dat2$month <- createSiteMonthData(siteType = input$filterSpace2, dat = dat, yearSelect = input$year, monthSelect = month, landLabel = landLabel2)
     })
+    
+    print(head(rv$dat2$month))
+    return(rv$dat2$month)
 
   })
      
@@ -711,6 +730,9 @@ server <- function(input, output, session) {
                                      endDate = input$dateRangeSelect[2], landLabel = landLabel2)
     })
     
+    print(head(rv$dat2$range))
+    return(rv$dat2$range)
+    
   })
   
   #plotUI---------------------------
@@ -745,23 +767,14 @@ server <- function(input, output, session) {
     
   })
   
-  output$dateRangeText <- renderUI({
-    
-    req(input$filterTime == "Date range")
-    
-    validate(
-      need(difftime(input$dateRangeSelect[2], input$dateRangeSelect[1], "days") < 31, "Date range is greater than one month"
-      ))
-    
-  })
-  
 
   ### year plot --------
   output$yearFig <- renderPlotly({
       
-      req(input$filterTime == "Year")
-      dat1df <- req(rv$dat1$year)
-      deg <- input$tempLabel
+    req(input$filterTime == "Year")
+    req(input$year)
+    dat1df <- req(rv$dat1$year)
+    deg <- input$tempLabel
       
       if(is.null(rv$dat2$year)) {
       #print("dat 2 is null")
@@ -829,7 +842,7 @@ server <- function(input, output, session) {
   output$monthFig <- renderPlotly({
     
     req(input$filterTime == "Month")
-    print("monthFig")
+    req(input$month)
     dat1df <- req(rv$dat1$month)
     
     deg <- input$tempLabel
@@ -976,12 +989,18 @@ server <- function(input, output, session) {
     validate(
       need(difftime(input$dateRangeSelect[2], input$dateRangeSelect[1], "days") < 31, "Date range is greater than one month"
       ))
+    validate(
+      need(difftime(input$dateRangeSelect[2], input$dateRangeSelect[1], "days") >1, "Make sure end date is after start date")
+    )
     
     req(input$filterTime == "Date range")
+    req(input$dateRangeSelect)
     dat1df <- req(rv$dat1$range)
     print("rangeFig")
     
     deg <- input$tempLabel
+    date1 <- format(input$dateRangeSelect[1], "%m/%d/%Y")
+    date2 <- format(input$dateRangeSelect[2], "%m/%d/%Y")
     
     if(is.null(rv$dat2$range)) {
       #print("dat 2 is null")
@@ -996,10 +1015,10 @@ server <- function(input, output, session) {
       }
       
       if(input$filterSpace == "Site") {
-        title = paste0("Temperatures at ", sid(), " from ", input$dateRangeSelect[1], " to ", input$dateRangeSelect[2])
+        title = paste0("Temperatures at ", sid(), " from ", date1, " to ", date2)
         landLabel1 = sid() 
       } else if(input$filterSpace == "Land cover") {
-        title = paste0("Temperatures in ", input$landCover, " areas from ", input$dateRangeSelect[1], " to ", input$dateRangeSelect[2])
+        title = paste0("Temperatures in ", input$landCover, " areas from ", date1, " to ", date2)
         landLabel1 = input$landCover
       }
       
@@ -1033,7 +1052,7 @@ server <- function(input, output, session) {
         landLabel2 = input$landCover2
       }
       
-      title = paste0("Temperatures from ", input$dateRangeSelect[1], " to ", input$dateRangeSelect[2])
+      title = paste0("Temperatures from ", date1, " to ", date2)
       
       rangePlot <- dateRangeCompletePlot(dat1 = convertDat1, dat2 = convertDat2, title = title, 
                                          landLabel1 = landLabel1, landLabel2 = landLabel2, yLabel = yLabel, 

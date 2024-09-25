@@ -170,7 +170,7 @@ createSiteMonthData <- function(siteType, dat, yearSelect, monthSelect, landLabe
     filteredDat <- filteredDat %>%
       filter(year == yearSelect,
              month == monthSelect) %>%
-      group_by(day, month, sid) %>%
+      group_by(day, month, year, sid) %>%
       summarise(meanTemp = round(mean(tempC, na.rm = TRUE),2),
                 minTemp = round(min(tempC, na.rm = TRUE),2),
                 maxTemp = round(max(tempC, na.rm = TRUE),2)) %>%
@@ -184,7 +184,7 @@ createSiteMonthData <- function(siteType, dat, yearSelect, monthSelect, landLabe
     filteredDat <- filteredDat %>%
       filter(year == yearSelect,
              month == monthSelect) %>%
-      group_by(day, month, cat) %>%
+      group_by(day, month, year, cat) %>%
       summarise(meanTemp = round(mean(tempC, na.rm = TRUE),2),
                 minTemp = round(min(tempC, na.rm = TRUE),2),
                 maxTemp = round(max(tempC, na.rm = TRUE),2)) %>%

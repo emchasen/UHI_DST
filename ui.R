@@ -36,7 +36,6 @@ ui <- fluidPage(
       )
   ),
   hr(),
-  #uiOutput("dateRangeText"),
   tags$head(
     tags$style(
       HTML(".shiny-notification {
