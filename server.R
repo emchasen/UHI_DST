@@ -383,8 +383,6 @@ server <- function(input, output, session) {
   
   #add selection UI------------------
   output$addSelectionUI <- renderUI({
-    
-    #print("rendering addSelectionUI")
 
     wellPanel(
       tagList(
@@ -401,7 +399,8 @@ server <- function(input, output, session) {
                  br(),
                  br(),
                  actionButton("clear", "Clear selection(s)"))
-        )
+        ),
+        uiOutput("diffTableUI")
       )
     )
 
@@ -481,11 +480,9 @@ server <- function(input, output, session) {
   
   observeEvent(input$landCover2, {
     
-    print("line 440")
     if(input$landCover2 != " ") {
       landcover <- input$landCover2
       cover2(landcover)
-      print(cover2())
     }
     
   })
@@ -539,8 +536,6 @@ server <- function(input, output, session) {
     req(input$filterTime == "Month")
     req(input$month)
     print("creating month dat 1")
-    print(input$month)
-    
     
     if(input$filterSpace == "Site") {
       landLabel1 = sid()
@@ -591,8 +586,6 @@ server <- function(input, output, session) {
       landLabel1 = input$landCover
     }
     
-    print(difftime(input$dateRangeSelect[2], input$dateRangeSelect[1], "days"))
-    print(class(input$dateRangeSelect[2]))
     validate(
       need(difftime(input$dateRangeSelect[2], input$dateRangeSelect[1], "days") < 31, "Date range is greater than one month")
       )
@@ -648,7 +641,6 @@ server <- function(input, output, session) {
     
     req(rv$dat1$month)
     req(input$month)
-    print(input$month)
     req(isTruthy(sid2()) || isTruthy(cover2()))
     req(input$filterTime == "Month")
     req(input$filterSpace2 != " ")
@@ -1065,6 +1057,59 @@ server <- function(input, output, session) {
     
   })
   
+  # diff Output table--------------
+  output$diffTableUI <- render_gt({
+    
+    req(rv$dat2)
+    
+    if(input$filterTime == "Year") {
+      
+      newDat <- datDif(rv$dat1$year, rv$dat2$year, "Year")
+      
+      newDat %>%
+        gt() %>%
+        data_color(columns = c(minDif, maxDif), palette = "YlOrRd") %>%
+        cols_label(
+          minDif = "\u0394 Min temp",
+          maxDif = "\u0394 Max temp") 
+      
+    } else if(input$filterTime == "Month") {
+      
+      newDat <- datDif(rv$dat1$month, rv$dat2$month, "Month")
+      
+      newDat %>%
+        gt() %>%
+        data_color(columns = c(minDif, maxDif), palette = "YlOrRd") %>%
+        cols_label(
+          day = "Day of month",
+          minDif = "\u0394 Min temp",
+          maxDif = "\u0394 Max temp")
+      
+    } else if(input$filterTime == "Day") {
+      
+      newDat <- datDif(rv$dat1$day, rv$dat2$day, "Day")
+      
+      newDat %>%
+        gt() %>%
+        data_color(columns = c(meanDif), palette = "YlOrRd") %>%
+        cols_label(
+          meanDif = "\u0394 Mean temp"
+        )
+    } else if(input$filterTime == "Date range") {
+      
+      newDat <- datDif(rv$dat1$range, rv$dat2$range, "Date range")
+      
+      newDat %>%
+        gt() %>%
+        data_color(columns = c(meanDif), palette = "YlOrRd") %>%
+        cols_label(
+          DateTime = "Date Time",
+          meanDif = "\u0394 Mean temp"
+        )
+    }
+    
+  })
+  
   # download data--------------
   output$download <- downloadHandler(
     
@@ -1073,7 +1118,6 @@ server <- function(input, output, session) {
     content = function(file) {
       
       df1 <- as.data.frame(rv$dat1)
-      print(head(df1))
       df1 <- df1 %>%
         mutate(data = "set1")
       

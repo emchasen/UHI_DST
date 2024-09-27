@@ -9,6 +9,7 @@ library(terra)
 #library(fst)
 library(shinyjs)
 library(shinycssloaders)
+library(gt)
 #library(reactlog)
 
 #reactlog::reactlog_enable()
@@ -260,10 +261,10 @@ createDateRangeData <- function(siteType, dat, startDate, endDate, landLabel) {
   } else if(siteType == "Land cover") {
     filteredDat <- dat %>% 
       filter(cat == landLabel) 
-    #incProgress(1/4, detail = "25%")
+    incProgress(1/4, detail = "25%")
     filteredDat <- filteredDat %>%
       filter(between(date, startDate, endDate))
-    #incProgress(2/4, detail = "50%")
+    incProgress(2/4, detail = "50%")
     sumDat <- filteredDat %>%
       group_by(time, cat, month, day, year, Time1) %>%
       summarise(meanTemp = mean(tempC, na.rm = TRUE)) %>%
@@ -534,3 +535,45 @@ dateRangeCompletePlot <- function(dat1, dat2 = NULL, title, landLabel1, landLabe
   plt
   
 }
+
+# data differences-------------------
+
+datDif <- function(dat1, dat2, timeSelect) {
+  
+  if(timeSelect == "Year") {
+    
+    # get min, mean, max for each month
+    sum1 <- dat1 %>%
+      group_by(monthName) %>%
+      summarise(minTemp = round(min(tempC, na.rm = TRUE),2),
+                #meanTemp = mean(tempC, na.rm = TRUE),
+                maxTemp = round(max(tempC, na.rm = TRUE),2))
+    
+    sum2 <- dat2 %>%
+      group_by(monthName) %>%
+      summarise(minTemp = round(min(tempC, na.rm = TRUE),2),
+                #meanTemp = mean(tempC, na.rm = TRUE),
+                maxTemp = round(max(tempC, na.rm = TRUE),2))
+    
+    newDat <- data.frame(Month = month.abb, minDif = round(abs(sum1$minTemp - sum2$minTemp),2), 
+                         maxDif = round(abs(sum1$maxTemp - sum2$maxTemp),2))
+    
+  } else if(timeSelect == "Month") {
+    
+    newDat <- data.frame(day = dat1$day, minDif = round(abs(dat1$minTemp - dat2$minTemp),2),
+                         maxDif = round(abs(dat1$maxTemp - dat2$maxTemp),2))
+    
+   } else if(timeSelect == "Day") {
+     
+     newDat <- data.frame(Time = dat1$Time, meanDif = round(abs(dat1$meanTemp - dat2$meanTemp),2))
+     
+   } else if(timeSelect == "Date range") {
+     
+     newDat <- data.frame(DateTime = dat1$time, 
+                          meanDif = round(abs(dat1$meanTemp - dat2$meanTemp),2))
+     
+   }
+   
+}
+
+
