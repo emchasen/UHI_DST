@@ -6,9 +6,10 @@ library(sf)
 library(leaflet)
 library(plotly)
 library(terra)
-#library(fst)
+library(fst)
 library(shinyjs)
 library(shinycssloaders)
+library(shinyWidgets)
 library(gt)
 #library(reactlog)
 
@@ -20,11 +21,11 @@ sites <- readxl::read_excel("data/sensorAttributes.xlsx") %>%
                                     is.na(category3) ~ paste(cat, category1, category2, sep = ", "),
                                     TRUE ~ paste(cat, category1, category2, category3, sep = ", ")))
 
-dat <- read_csv("data/partialDataLongDate.csv.gz") %>%
-  left_join(sites)
-
-# dat <- read_fst("data/fast_dat.fst") %>%
+# dat <- read_csv("data/partialDataLongDate.csv.gz") %>%
 #   left_join(sites)
+
+dat <- read_fst("data/fast_dat.fst") %>%
+  left_join(sites)
 
 # dat <- read_csv("data/sampleDat.csv.gz") %>%
 #   left_join(sites)
@@ -78,6 +79,14 @@ CtoF <- function(x) {
   return(F)
 }
 
+time_labels = expand.grid(
+  hours = 0:24,
+  minutes = 0
+) %>%
+  mutate_at(1:2, ~ifelse(nchar(.) == 1, paste0('0', .), .)) %>%
+  mutate(time_label = paste0(hours, ':', minutes)) %>%
+  arrange(time_label) %>%
+  pull(time_label)
 
 # map functions--------------------
 base_map <- function() {
@@ -545,15 +554,15 @@ datDif <- function(dat1, dat2, timeSelect) {
     # get min, mean, max for each month
     sum1 <- dat1 %>%
       group_by(monthName) %>%
-      summarise(minTemp = round(min(tempC, na.rm = TRUE),2),
+      summarise(minTemp = round(min(temp, na.rm = TRUE),2),
                 #meanTemp = mean(tempC, na.rm = TRUE),
-                maxTemp = round(max(tempC, na.rm = TRUE),2))
+                maxTemp = round(max(temp, na.rm = TRUE),2))
     
     sum2 <- dat2 %>%
       group_by(monthName) %>%
-      summarise(minTemp = round(min(tempC, na.rm = TRUE),2),
+      summarise(minTemp = round(min(temp, na.rm = TRUE),2),
                 #meanTemp = mean(tempC, na.rm = TRUE),
-                maxTemp = round(max(tempC, na.rm = TRUE),2))
+                maxTemp = round(max(temp, na.rm = TRUE),2))
     
     newDat <- data.frame(Month = month.abb, minDif = round(abs(sum1$minTemp - sum2$minTemp),2), 
                          maxDif = round(abs(sum1$maxTemp - sum2$maxTemp),2))

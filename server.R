@@ -400,7 +400,7 @@ server <- function(input, output, session) {
                  br(),
                  actionButton("clear", "Clear selection(s)"))
         ),
-        uiOutput("diffTableUI")
+        uiOutput("sliderValsUI")
       )
     )
 
@@ -751,11 +751,20 @@ server <- function(input, output, session) {
                  withSpinner(plotlyOutput("dayFig"), type = 8)
                } else if(input$filterTime == "Date range") {
                  withSpinner(plotlyOutput("rangeFig"), type = 8)
-               }),
+               },
+               uiOutput("plotHelpTextUI")),
         column(4,
                uiOutput("addSelectionUI"))
       )
     )
+    
+  })
+  
+  # plot help text---------------
+  output$plotHelpTextUI <- renderUI({
+    
+    req(input$filterTime == "Month")
+    helpText("Click on legend items to remove data from plot.")
     
   })
   
@@ -1057,54 +1066,275 @@ server <- function(input, output, session) {
     
   })
   
+  # sliderVals ----------
+  
+  output$sliderValsUI <- renderUI({
+    
+    req(rv$dat2)
+    
+    tagList(
+      h5("Use the slider below to view the difference in temperatures between your two locations at your selected time."),
+      if(input$filterTime == "Year") {
+        
+        sliderTextInput(
+          inputId = "yearSlider",
+          label = "Select month",
+          choices = month.abb,
+          selected = month.abb[1],
+          grid = TRUE
+        )
+        
+      } else if(input$filterTime == "Month") {
+        
+        dayChoices <- days %>% filter(year == input$year, month == input$month)
+        dayChoices <- 1:dayChoices$day
+        
+        sliderInput(
+          inputId = "monthSlider",
+          label = "Select day",
+          min = 1, max = max(dayChoices), value = 1, step = 1
+        )
+        
+      } else if(input$filterTime == "Day") {
+        
+        sliderTextInput(
+          inputId = "daySlider",
+          label = "Select time",
+          choices = time_labels,
+          selected = "00:00"
+        )
+        
+      } else if(input$filterTime == "Date range") {
+        
+        tagList(
+          sliderInput(
+            inputId = "rangeDaySlider",
+            label = "Select day",
+            min = input$dateRangeSelect[1],
+            max = input$dateRangeSelect[2],
+            value = input$dateRangeSelect[1]
+          ),
+          sliderTextInput(
+            inputId = "rangeTimeSlider",
+            label = "Select time",
+            choices = time_labels,
+            selected = "00:00"
+          )
+        )
+      },
+      uiOutput("diffTableUI1"),
+      h5("View the full set of times and temperature differences below. Darker shades of red indicate a greater difference."),
+      uiOutput("diffTableUI")
+    )
+  })
+  
+  # diff output table1---------------
+  output$diffTableUI1 <- render_gt({
+    
+    req(rv$dat2)
+    deg <- input$tempLabel
+    
+    if(deg == "Celsius") {
+      label = "(°C)"
+    } else if(deg == "Fahrenheit") {
+      label = "(°F)"
+    }
+    
+    if(input$filterTime == "Year") {
+      
+      if(deg == "Fahrenheit") {
+        yearDat1 <- rv$dat1$year %>%
+          mutate(temp = round(CtoF(tempC),1))
+        yearDat2 <- rv$dat2$year %>%
+          mutate(temp = round(CtoF(tempC),1))
+      } else {
+        yearDat1 <- rv$dat1$year %>%
+          mutate(temp = round(tempC,1))
+        yearDat2 <- rv$dat2$year %>%
+          mutate(temp = round(tempC,1))
+      }
+      
+      newDat <- datDif(yearDat1, yearDat2, "Year")
+      
+      newDat %>%
+        filter(Month == input$yearSlider) %>%
+        gt() %>%
+        cols_label(
+          minDif = paste("\u0394 Min temp", label),
+          maxDif = paste("\u0394 Max temp", label)) 
+      
+    } else if(input$filterTime == "Month") {
+      
+      if(deg == "Celsius") {
+        monthDat1 <- rv$dat1$month
+        monthDat2 <- rv$dat2$month
+      } else if(deg == "Fahrenheit") {
+        monthDat1 <- rv$dat1$month %>%
+          mutate(minTemp = round(CtoF(minTemp), 2),
+                 maxTemp = round(CtoF(maxTemp), 2))
+        monthDat2 <- rv$dat2$month %>%
+          mutate(minTemp = round(CtoF(minTemp), 2),
+                 maxTemp = round(CtoF(maxTemp), 2))
+      }
+      
+      newDat <- datDif(monthDat1, monthDat2, "Month")
+      
+      newDat %>%
+        filter(day == input$monthSlider) %>%
+        gt() %>%
+        cols_label(
+          day = "Day of month",
+          minDif = paste("\u0394 Min temp", label),
+          maxDif = paste("\u0394 Max temp", label))
+      
+    } else if(input$filterTime == "Day") {
+      
+      if(deg == "Celsius") {
+        dayDat1 <- rv$dat1$day
+        dayDat2 <- rv$dat2$day
+      } else if(deg == "Fahrenheit") {
+        dayDat1 <- rv$dat1$day %>%
+          mutate(meanTemp = round(CtoF(meanTemp),2))
+        dayDat2 <- rv$dat2$day %>%
+          mutate(meanTemp = round(CtoF(meanTemp),2))
+      }
+      
+      newDat <- datDif(dayDat1, dayDat2, "Day")
+  
+      newDat %>%
+        filter(Time == input$daySlider) %>%
+        gt() %>%
+        cols_label(
+          meanDif = paste("\u0394 Mean temp", label)
+        )
+      
+    } else if(input$filterTime == "Date range") {
+      
+      if(deg == "Celsius") {
+        rangeDat1 <- rv$dat1$range 
+        rangeDat2 <- rv$dat2$range 
+      } else if(deg == "Fahrenheit") {
+        rangeDat1 <- rv$dat1$range %>%
+          mutate(meanTemp = round(CtoF(meanTemp),2))
+        rangeDat2 <- rv$dat2$range %>%
+          mutate(meanTemp = round(CtoF(meanTemp),2))
+      }
+      
+      newDat <- datDif(rangeDat1, rangeDat2, "Date range") 
+
+      dayTime <- as.POSIXct((paste(input$rangeDaySlider, input$rangeTimeSlider)), tz = "UTC")
+      
+      newDat %>%
+        filter(DateTime == dayTime) %>%
+        gt() %>%
+        cols_label(
+          DateTime = "Date Time",
+          meanDif = paste("\u0394 Mean temp", label)
+        )
+    }
+    
+    
+  })
+    
   # diff Output table--------------
   output$diffTableUI <- render_gt({
     
     req(rv$dat2)
+    deg <- input$tempLabel
+    if(deg == "Celsius") {
+      label = "(°C)"
+    } else if(deg == "Fahrenheit") {
+      label = "(°F)"
+    }
     
     if(input$filterTime == "Year") {
       
-      newDat <- datDif(rv$dat1$year, rv$dat2$year, "Year")
+      if(deg == "Fahrenheit") {
+        yearDat1 <- rv$dat1$year %>%
+          mutate(temp = round(CtoF(tempC),1))
+        yearDat2 <- rv$dat2$year %>%
+          mutate(temp = round(CtoF(tempC),1))
+      } else {
+        yearDat1 <- rv$dat1$year %>%
+          mutate(temp = round(tempC,1))
+        yearDat2 <- rv$dat2$year %>%
+          mutate(temp = round(tempC,1))
+      }
+      
+      newDat <- datDif(yearDat1, yearDat2, "Year")
       
       newDat %>%
         gt() %>%
         data_color(columns = c(minDif, maxDif), palette = "YlOrRd") %>%
         cols_label(
-          minDif = "\u0394 Min temp",
-          maxDif = "\u0394 Max temp") 
+          minDif = paste("\u0394 Min temp", label),
+          maxDif = paste("\u0394 Max temp", label)) 
       
     } else if(input$filterTime == "Month") {
       
-      newDat <- datDif(rv$dat1$month, rv$dat2$month, "Month")
+      if(deg == "Celsius") {
+        monthDat1 <- rv$dat1$month
+        monthDat2 <- rv$dat2$month
+      } else if(deg == "Fahrenheit") {
+        monthDat1 <- rv$dat1$month %>%
+          mutate(minTemp = round(CtoF(minTemp), 2),
+                 maxTemp = round(CtoF(maxTemp), 2))
+        monthDat2 <- rv$dat2$month %>%
+          mutate(minTemp = round(CtoF(minTemp), 2),
+                 maxTemp = round(CtoF(maxTemp), 2))
+      }
+      
+      newDat <- datDif(monthDat1, monthDat2, "Month")
       
       newDat %>%
         gt() %>%
         data_color(columns = c(minDif, maxDif), palette = "YlOrRd") %>%
         cols_label(
           day = "Day of month",
-          minDif = "\u0394 Min temp",
-          maxDif = "\u0394 Max temp")
+          minDif = paste("\u0394 Min temp", label),
+          maxDif = paste("\u0394 Max temp", label))
       
     } else if(input$filterTime == "Day") {
       
-      newDat <- datDif(rv$dat1$day, rv$dat2$day, "Day")
+      if(deg == "Celsius") {
+        dayDat1 <- rv$dat1$day
+        dayDat2 <- rv$dat2$day
+      } else if(deg == "Fahrenheit") {
+        dayDat1 <- rv$dat1$day %>%
+          mutate(meanTemp = round(CtoF(meanTemp),2))
+        dayDat2 <- rv$dat2$day %>%
+          mutate(meanTemp = round(CtoF(meanTemp),2))
+      }
+      
+      newDat <- datDif(dayDat1, dayDat2, "Day")
       
       newDat %>%
         gt() %>%
         data_color(columns = c(meanDif), palette = "YlOrRd") %>%
         cols_label(
-          meanDif = "\u0394 Mean temp"
+          meanDif = paste("\u0394 Mean temp", label)
         )
+      
     } else if(input$filterTime == "Date range") {
       
-      newDat <- datDif(rv$dat1$range, rv$dat2$range, "Date range")
+      if(deg == "Celsius") {
+        rangeDat1 <- rv$dat1$range 
+        rangeDat2 <- rv$dat2$range 
+      } else if(deg == "Fahrenheit") {
+        rangeDat1 <- rv$dat1$range %>%
+          mutate(meanTemp = round(CtoF(meanTemp),2))
+        rangeDat2 <- rv$dat2$range %>%
+          mutate(meanTemp = round(CtoF(meanTemp),2))
+      }
+      
+      newDat <- datDif(rangeDat1, rangeDat2, "Date range") 
       
       newDat %>%
         gt() %>%
         data_color(columns = c(meanDif), palette = "YlOrRd") %>%
         cols_label(
           DateTime = "Date Time",
-          meanDif = "\u0394 Mean temp"
+          meanDif = paste("\u0394 Mean temp", label)
         )
     }
     
