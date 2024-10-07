@@ -1,3 +1,6 @@
+#install.packages("fst")
+#install.packages("shinyWidgets")
+
 #install libraries
 library(shiny)
 library(shinyjs)
@@ -6,10 +9,10 @@ library(sf)
 library(leaflet)
 library(plotly)
 library(terra)
-library(fst)
+#library(fst)
 library(shinyjs)
 library(shinycssloaders)
-library(shinyWidgets)
+#library(shinyWidgets)
 library(gt)
 #library(reactlog)
 
@@ -24,11 +27,11 @@ sites <- readxl::read_excel("data/sensorAttributes.xlsx") %>%
 # dat <- read_csv("data/partialDataLongDate.csv.gz") %>%
 #   left_join(sites)
 
-dat <- read_fst("data/fast_dat.fst") %>%
-  left_join(sites)
-
-# dat <- read_csv("data/sampleDat.csv.gz") %>%
+# dat <- read_fst("data/fast_dat.fst") %>%
 #   left_join(sites)
+
+dat <- read_csv("data/sampleDat.csv.gz") %>%
+  left_join(sites)
 
 days <- read_csv("data/days.csv")
 
