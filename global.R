@@ -1,6 +1,3 @@
-#install.packages("fst")
-#install.packages("shinyWidgets")
-
 #install libraries
 library(shiny)
 library(shinyjs)
@@ -9,14 +6,12 @@ library(sf)
 library(leaflet)
 library(plotly)
 library(terra)
-#library(fst)
+library(fst)
 library(shinyjs)
 library(shinycssloaders)
-#library(shinyWidgets)
+library(shinyWidgets)
 library(gt)
-#library(reactlog)
 
-#reactlog::reactlog_enable()
 
 # load data
 sites <- readxl::read_excel("data/sensorAttributes.xlsx") %>%
@@ -27,11 +22,11 @@ sites <- readxl::read_excel("data/sensorAttributes.xlsx") %>%
 # dat <- read_csv("data/partialDataLongDate.csv.gz") %>%
 #   left_join(sites)
 
-# dat <- read_fst("data/fast_dat.fst") %>%
-#   left_join(sites)
-
-dat <- read_csv("data/sampleDat.csv.gz") %>%
+dat <- read_fst("data/fast_dat.fst") %>%
   left_join(sites)
+
+# dat <- read_csv("data/sampleDat.csv.gz") %>%
+#   left_join(sites)
 
 days <- read_csv("data/days.csv")
 
@@ -45,7 +40,6 @@ days <- read_csv("data/days.csv")
 sites_sf <- sites %>%
   st_as_sf(coords = c("lon", "lat"), crs = 4326, remove = F) 
 
-##TODO remake raster without barren/shrubland. Probably also include more counties
 landCover <- rast("data/landCoverAgg.tif")
 jan_day <- rast("data/january2023_daytime_degF.tif")
 jan_night <- rast("data/january2023_nighttime_degF.tif")
@@ -567,7 +561,7 @@ datDif <- function(dat1, dat2, timeSelect) {
                 #meanTemp = mean(tempC, na.rm = TRUE),
                 maxTemp = round(max(temp, na.rm = TRUE),2))
     
-    newDat <- data.frame(Month = month.abb, minDif = round(abs(sum1$minTemp - sum2$minTemp),2), 
+    newDat <- data.frame(Month = sum1$monthName, minDif = round(abs(sum1$minTemp - sum2$minTemp),2), 
                          maxDif = round(abs(sum1$maxTemp - sum2$maxTemp),2))
     
   } else if(timeSelect == "Month") {

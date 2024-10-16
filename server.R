@@ -124,18 +124,10 @@ server <- function(input, output, session) {
     
     if ("Dec. day" %in% input$layers) {
       addHeatLayer(dec_day)
-      # leafletProxy("map") %>%
-      #   addRasterImage(dec_day, colorNumeric(palTemp, values(dec_day),  na.color = "transparent")) %>%
-      #   addLegend("bottomright", pal = colorNumeric(palTemp, values(dec_day),  na.color = "transparent"), 
-      #             values = values(dec_day), title = "Dec. day temps (°F)")
     }
     
     if ("Dec. night" %in% input$layers) {
       addHeatLayer(dec_night)
-      # leafletProxy("map") %>%
-      #   addRasterImage(dec_night, colorNumeric(palTemp, values(dec_night),  na.color = "transparent")) %>%
-      #   addLegend("bottomright", pal = colorNumeric(palTemp, values(dec_night),  na.color = "transparent"), 
-      #             values = values(dec_night), title = "Dec. night temps (°F)")
     }
   })
   
@@ -327,7 +319,7 @@ server <- function(input, output, session) {
     } else {
       yearChoices <- c(2012:2023)
     }
-    req(input$filterTime != " ")
+    #req(input$filterTime != " ")
     selectInput(inputId = "year", label = "Select year", choices = c("", sort(yearChoices, decreasing = TRUE)))
     
   })
@@ -1076,11 +1068,13 @@ server <- function(input, output, session) {
       h5("Use the slider below to view the difference in temperatures between your two locations at your selected time."),
       if(input$filterTime == "Year") {
         
+        months <- unique(rv$dat2$year$monthName)
+        
         sliderTextInput(
           inputId = "yearSlider",
           label = "Select month",
-          choices = month.abb,
-          selected = month.abb[1],
+          choices = months,
+          selected = months[1],
           grid = TRUE
         )
         
@@ -1347,22 +1341,85 @@ server <- function(input, output, session) {
     
     content = function(file) {
       
-      df1 <- as.data.frame(rv$dat1)
-      df1 <- df1 %>%
-        mutate(data = "set1")
-      
-      if(is.null(rv$dat2)) {
+      if(input$filterTime == "Year") { 
+        df1 <- as.data.frame(rv$dat1$year)
+        print(head(df1))
+        df1 <- df1 %>%
+          mutate(data = "set1") %>%
+          rename(id = sid,
+                 landcover = cat)
         
-        write.csv(df1, file, row.names = FALSE)
+        if(is.null(rv$dat2$year)) {
+          
+          write.csv(df1, file, row.names = FALSE)
+          
+        } else {
+          
+          df2 <- as.data.frame(rv$dat2$year)
+          df2 <- df2 %>%
+            mutate(data = "set2") %>%
+            rename(id = sid,
+                   landcover = cat) %>%
+            bind_rows(df1)
+          
+          write.csv(df2, file, row.names = FALSE)
+        }
+      } else if(input$filterTime == "Month") {
         
-      } else {
+        df1 <- as.data.frame(rv$dat1$month)
+        df1 <- df1 %>%
+          mutate(data = "set1")
         
-        df2 <- as.data.frame(rv$dat2)
-        df2 <- df2 %>%
-          mutate(data = "set2") %>%
-          bind_rows(df1)
+        if(is.null(rv$dat2$month)) {
+          
+          write.csv(df1, file, row.names = FALSE)
+          
+        } else {
+          
+          df2 <- as.data.frame(rv$dat2$month)
+          df2 <- df2 %>%
+            mutate(data = "set2") %>%
+            bind_rows(df1)
+          
+          write.csv(df2, file, row.names = FALSE)
+        }
         
-        write.csv(df2, file, row.names = FALSE)
+      } else if(input$filterTime == "Day") {
+        df1 <- as.data.frame(rv$dat1$day)
+        df1 <- df1 %>%
+          mutate(data = "set1")
+        
+        if(is.null(rv$dat2$day)) {
+          
+          write.csv(df1, file, row.names = FALSE)
+          
+        } else {
+          
+          df2 <- as.data.frame(rv$dat2$day)
+          df2 <- df2 %>%
+            mutate(data = "set2") %>%
+            bind_rows(df1)
+          
+          write.csv(df2, file, row.names = FALSE)
+        }
+      } else if(input$filterTime == "Date range") {
+        df1 <- as.data.frame(rv$dat1$range)
+        df1 <- df1 %>%
+          mutate(data = "set1")
+        
+        if(is.null(rv$dat2$range)) {
+          
+          write.csv(df1, file, row.names = FALSE)
+          
+        } else {
+          
+          df2 <- as.data.frame(rv$dat2$range)
+          df2 <- df2 %>%
+            mutate(data = "set2") %>%
+            bind_rows(df1)
+          
+          write.csv(df2, file, row.names = FALSE)
+        }
       }
     }
   )
