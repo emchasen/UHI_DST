@@ -65,11 +65,50 @@ nov_day <- rast("data/november2023_daytime_degF.tif")
 nov_night <- rast("data/november2023_nighttime_degF.tif")
 dec_day <- rast("data/december2023_daytime_degF.tif")
 dec_night <- rast("data/december2023_nighttime_degF.tif")
+day12 <- rast("data/July2012_daytime_degF.tif")
+night12 <- rast("data/July2012_nighttime_degF.tif")
+day13 <- rast("data/July2013_daytime_degF.tif")
+night13 <- rast("data/July2013_nighttime_degF.tif")
+day14 <- rast("data/July2014_daytime_degF.tif")
+night14 <- rast("data/July2014_nighttime_degF.tif")
+day15 <- rast("data/July2015_daytime_degF.tif")
+night15 <- rast("data/July2015_nighttime_degF.tif")
+day16 <- rast("data/July2016_daytime_degF.tif")
+night16 <- rast("data/July2016_nighttime_degF.tif")
+day17 <- rast("data/July2017_daytime_degF.tif")
+night17 <- rast("data/July2017_nighttime_degF.tif")
+day18 <- rast("data/July2018_daytime_degF.tif")
+night18 <- rast("data/July2018_nighttime_degF.tif")
+day19 <- rast("data/July2019_daytime_degF.tif")
+night19 <- rast("data/July2019_nighttime_degF.tif")
+day20 <- rast("data/July2020_daytime_degF.tif")
+night20 <- rast("data/July2020_nighttime_degF.tif")
+day21 <- rast("data/July2021_daytime_degF.tif")
+night21 <- rast("data/July2021_nighttime_degF.tif")
+day22 <- rast("data/July2022_daytime_degF.tif")
+night22 <- rast("data/July2022_nighttime_degF.tif")
+day23 <- rast("data/July2023_daytime_degF.tif")
+night23 <- rast("data/July2023_nighttime_degF.tif")
 
-layerChoices <- c("None", "Land cover", "Jan. day", "Jan. night", "Feb. day", "Feb. night", "Mar. day", "Mar. night",
-                  "Apr. day", "Apr. night", "May day", "May night", "Jun. day", "Jun. night",
-                  "Jul. day", "Jul. night", "Aug. day", "Aug. night", "Sep. day", "Sep. night",
-                  "Oct. day", "Oct. night", "Nov. day", "Nov. night", "Dec. day", "Dec. night")
+
+# layerChoices <- c("None", "Land cover", "Jan. '24 day", "Jan. '24 night", "Feb. '24 day", "Feb. '24 night", "Mar. '24 day", "Mar. '24 night",
+#                   "Apr. '24 day", "Apr. '24 night", "May '24 day", "May '24 night", "Jun. '24 day", "Jun. '24 night",
+#                   "Jul. '24 day", "Jul. '24 night", "Aug. '24 day", "Aug. '24 night", "Sep. '24 day", "Sep. '24 night",
+#                   "Oct. '24 day", "Oct. '24 night", "Nov. '24 day", "Nov. '24 night", "Dec. '24 day", "Dec. '24 night",
+#                   "Jul. '23 day", "Jul. '23 night", "Jul. '22 day", "Jul. '22 night", "Jul. '21 day", "Jul. '21 night",
+#                   "Jul. '20 day", "Jul. '20 night", "Jul. '19 day", "Jul. '19 night", "Jul. '18 day", "Jul. '18 night",
+#                   "Jul. '17 day", "Jul. '17 night", "Jul. '16 day", "Jul. '16 night", "Jul. '15 day", "Jul. '15 night",
+#                   "Jul. '14 day", "Jul. '14 night", "Jul. '13 day", "Jul. '13 night", "Jul. '12 day", "Jul. '12 night")
+
+temp2023 <- c("None", "Jan. '23 day", "Jan. '23 night", "Feb. '23 day", "Feb. '23 night", "Mar. '23 day", "Mar. '23 night",
+              "Apr. '23 day", "Apr. '23 night", "May '23 day", "May '23 night", "Jun. '23 day", "Jun. '23 night",
+              "Jul. '23 day", "Jul. '23 night", "Aug. '23 day", "Aug. '23 night", "Sep. '23 day", "Sep. '23 night",
+              "Oct. '23 day", "Oct. '23 night", "Nov. '23 day", "Nov. '23 night", "Dec. '23 day", "Dec. '23 night")
+
+tempJuly <- c("None", "Jul. '22 day", "Jul. '22 night", "Jul. '21 day", "Jul. '21 night",
+              "Jul. '20 day", "Jul. '20 night", "Jul. '19 day", "Jul. '19 night", "Jul. '18 day", "Jul. '18 night",
+              "Jul. '17 day", "Jul. '17 night", "Jul. '16 day", "Jul. '16 night", "Jul. '15 day", "Jul. '15 night",
+              "Jul. '14 day", "Jul. '14 night", "Jul. '13 day", "Jul. '13 night", "Jul. '12 day", "Jul. '12 night")
 
 CtoF <- function(x) {
   F = (x * (9/5)) + 32
@@ -125,7 +164,7 @@ addHeatLayer <- function(dat) {
   leafletProxy("map") %>%
     addRasterImage(dat, group = "temps", colorNumeric(palTemp, values(dat),  na.color = "transparent")) %>%
     addLegend("bottomright", pal = colorNumeric(palTemp, values(dat),  na.color = "transparent"), 
-              values = values(dat), title = "Avg. temps (°F)")
+              values = values(dat), title = "Avg. temps (°F)") 
   
 }
 

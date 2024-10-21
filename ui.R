@@ -33,8 +33,15 @@ ui <- fluidPage(
                         #                           "Jul 2023 night" = "julNight",
                         #                           "None" = "none"),
                         #              selected = "none"),
-                        selectInput("layers", "Map layers*", choices = layerChoices, selected = "None"),
-                        helpText("*Month. day/night layers display monthly average temperatures (°F) from 2023.")
+                        #selectInput("layers", "Map layers*", choices = layerChoices, selected = "None"),
+                        #helpText("*Month. day/night layers display monthly average temperatures (°F) from 2023."),
+                        h4("Map layers"),
+                        wellPanel(
+                        
+                        selectInput("cover", "Land cover", choices = c("Off", "On"), selected = "Off"),
+                        h5("Monthly temperature averages (°F)"),
+                        selectInput("uhi2023", "2023", choices = temp2023, selected = "None"),
+                        selectInput("uhiJuly", "2012-2022 July", choices = tempJuly, selected = "None"))
                  )
                )
              ),

@@ -14,7 +14,8 @@ server <- function(input, output, session) {
       clearImages() %>%
       clearControls()
       
-    if ("None" %in% input$layers) {
+    if("Off" %in% input$cover) {
+    #if ("None" %in% input$layers) {
       leafletProxy("map") 
     }
     
@@ -25,7 +26,7 @@ server <- function(input, output, session) {
                   opacity = 1)
     }
     
-    if ("Land cover" %in% input$layers) {
+    if ("On" %in% input$cover) {
       leafletProxy("map") %>%
         addRasterImage(landCover, group = "landCover",
                        colors = c("#b50101", "#e8d1d2",  "#cb9147", "darkgreen", "skyblue1", "steelblue3", "wheat")) %>%
@@ -34,101 +35,218 @@ server <- function(input, output, session) {
                   opacity = 1)
     }
     
-    if ("Jan. day" %in% input$layers) {
+    if ("Jan. '23 day" %in% input$uhi2023) {
       addHeatLayer(dat = jan_day)
     }
     
-    if ("Jan. night" %in% input$layers) {
+    if ("Jan. '23 night" %in% input$uhi2023) {
       addHeatLayer(dat = jan_night)
     }
     
-    if ("Feb. day" %in% input$layers) {
+    if ("Feb. '23 day" %in% input$uhi2023) {
       addHeatLayer(dat = feb_day)
     }
     
-    if ("Feb. night" %in% input$layers) {
+    if ("Feb. '23 night" %in% input$uhi2023) {
       addHeatLayer(feb_night)
     }
     
-    if ("Mar. day" %in% input$layers) {
+    if ("Mar. '23 day" %in% input$uhi2023) {
       addHeatLayer(mar_day)
     }
     
-    if ("Mar. night" %in% input$layers) {
+    if ("Mar. '23 night" %in% input$uhi2023) {
       addHeatLayer(mar_night)
     }
     
-    if ("Apr. day" %in% input$layers) {
+    if ("Apr. '23 day" %in% input$uhi2023) {
       addHeatLayer(apr_day)
     }
     
-    if ("Apr. night" %in% input$layers) {
+    if ("Apr. '23 night" %in% input$uhi2023) {
       addHeatLayer(apr_night)
     }
     
-    if ("May day" %in% input$layers) {
+    if ("May '23 day" %in% input$uhi2023) {
       addHeatLayer(may_day)
     }
     
-    if ("May night" %in% input$layers) {
+    if ("May '23 night" %in% input$uhi2023) {
       addHeatLayer(may_night)
     }
     
-    if ("Jun. day" %in% input$layers) {
+    if ("Jun. '23 day" %in% input$uhi2023) {
       addHeatLayer(jun_day)
     }
     
-    if ("Jun. night" %in% input$layers) {
+    if ("Jun. '23 night" %in% input$uhi2023) {
       addHeatLayer(jun_night)
     }
     
-    if ("Jul. day" %in% input$layers) {
+    if ("Jul. '23 day" %in% input$uhi2023) {
       addHeatLayer(jul_day)
     }
     
-    if ("Jul. night" %in% input$layers) {
+    if ("Jul. '23 night" %in% input$uhi2023) {
       addHeatLayer(jul_night)
     }
     
-    if ("Aug. day" %in% input$layers) {
+    if ("Aug. '23 day" %in% input$uhi2023) {
       addHeatLayer(aug_day)
     }
     
-    if ("Aug. night" %in% input$layers) {
+    if ("Aug. '23 night" %in% input$uhi2023) {
       addHeatLayer(aug_night)
     }
     
-    if ("Sep. day" %in% input$layers) {
+    if ("Sep. '23 day" %in% input$uhi2023) {
       addHeatLayer(sep_day)
     }
     
-    if ("Sep. night" %in% input$layers) {
+    if ("Sep. '23 night" %in% input$uhi2023) {
       addHeatLayer(sep_night)
     }
     
-    if ("Oct. day" %in% input$layers) {
+    if ("Oct. '23 day" %in% input$uhi2023) {
       addHeatLayer(oct_day)
     }
     
-    if ("Oct. night" %in% input$layers) {
+    if ("Oct. '23 night" %in% input$uhi2023) {
       addHeatLayer(oct_night)
     }
     
-    if ("Nov. day" %in% input$layers) {
+    if ("Nov. '23 day" %in% input$uhi2023) {
       addHeatLayer(nov_day)
     }
     
-    if ("Nov. night" %in% input$layers) {
+    if ("Nov. '23 night" %in% input$uhi2023) {
       addHeatLayer(nov_night)
     }
     
-    if ("Dec. day" %in% input$layers) {
+    if ("Dec. '23 day" %in% input$uhi2023) {
       addHeatLayer(dec_day)
     }
     
-    if ("Dec. night" %in% input$layers) {
+    if ("Dec. '23 night" %in% input$uhi2023) {
       addHeatLayer(dec_night)
     }
+    
+    if ("Jul. '22 day" %in% input$uhiJuly) {
+      addHeatLayer(day22)
+    }
+    
+    if ("Jul. '22 night" %in% input$uhiJuly) {
+      addHeatLayer(night22)
+    }
+    
+    if ("Jul. '21 day" %in% input$uhiJuly) {
+      addHeatLayer(day21)
+    }
+    
+    if ("Jul. '21 night" %in% input$uhiJuly) {
+      addHeatLayer(night21)
+    }
+    
+    if ("Jul. '20 day" %in% input$uhiJuly) {
+      addHeatLayer(day20)
+    }
+    
+    if ("Jul. '20 night" %in% input$uhiJuly) {
+      addHeatLayer(night20)
+    }
+    
+    if ("Jul. '19 day" %in% input$uhiJuly) {
+      addHeatLayer(day19)
+    }
+    
+    if ("Jul. '19 night" %in% input$uhiJuly) {
+      addHeatLayer(night19)
+    }
+    
+    if ("Jul. '18 day" %in% input$uhiJuly) {
+      addHeatLayer(day18)
+    }
+    
+    if ("Jul. '18 night" %in% input$uhiJuly) {
+      addHeatLayer(night18)
+    }
+    
+    if ("Jul. '17 day" %in% input$uhiJuly) {
+      addHeatLayer(day17)
+    }
+    
+    if ("Jul. '17 night" %in% input$uhiJuly) {
+      addHeatLayer(night17)
+    }
+    
+    if ("Jul. '16 day" %in% input$uhiJuly) {
+      addHeatLayer(day16)
+    }
+    
+    if ("Jul. '16 night" %in% input$uhiJuly) {
+      addHeatLayer(night16)
+    }
+    
+    if ("Jul. '15 day" %in% input$uhiJuly) {
+      addHeatLayer(day15)
+    }
+    
+    if ("Jul. '15 night" %in% input$uhiJuly) {
+      addHeatLayer(night15)
+    }
+    
+    if ("Jul. '14 day" %in% input$uhiJuly) {
+      addHeatLayer(day14)
+    }
+    
+    if ("Jul. '14 night" %in% input$uhiJuly) {
+      addHeatLayer(night14)
+    }
+    
+    if ("Jul. '13 day" %in% input$uhiJuly) {
+      addHeatLayer(day13)
+    }
+    
+    if ("Jul. '13 night" %in% input$uhiJuly) {
+      addHeatLayer(night13)
+    }
+    
+    if ("Jul. '12 day" %in% input$uhiJuly) {
+      addHeatLayer(day12)
+    }
+    
+    if ("Jul. '12 night" %in% input$uhiJuly) {
+      addHeatLayer(night12)
+    }
+    
+  })
+  
+  # if one of the above layers is on, the others should not-------------
+  observeEvent(input$cover, {
+    
+    if(input$cover == "On") {
+      updateSelectInput(inputId = "uhi2024", selected = "None")
+      updateSelectInput(inputId = "uhiJuly", selected = "None")
+    }
+    
+  })
+  
+  observeEvent(input$uhi2024, {
+    
+    if(input$uhi2024 != "None") {
+      updateSelectInput(inputId = "cover", selected = "Off")
+      updateSelectInput(inputId = "uhiJuly", selected = "None")
+    }
+    
+  })
+  
+  observeEvent(input$uhiJuly, {
+    
+    if(input$uhiJuly != "None") {
+      updateSelectInput(inputId = "cover", selected = "Off")
+      updateSelectInput(inputId = "uhi2024", selected = "None")
+    }
+    
   })
   
   # reactive vals--------------
@@ -226,33 +344,19 @@ server <- function(input, output, session) {
   # create sid-------------------
   observeEvent(input$map_marker_click, {
     
-    if(!isTruthy(rv$dat1)) { ##TODO how else can I define this?  
-      #print("inside istruthy")
-      #print(input$addSelect)
+    if(!isTruthy(rv$dat1)) { ##TODO how else can I define this? 
+    #if(is.null(input$filterSpace2)) {
+      #print(input$filterSpace2)
+      #print(is.null(input$filterSpace2))
       click <- input$map_marker_click
       sid(click$id)
-      lat <- as.numeric(click$lat)
-      lon <- as.numeric(click$lng)
-      
+      # lat <- as.numeric(click$lat)
+      # lon <- as.numeric(click$lng)
+      # 
       #return sidData needed to filter time
       sidDF <- siteData(dat, site = click$id)
       sidData(sidDF)
-      # print(head(sidDF))
-      # 
-      # text = unique(sidData()$categoryString)
-      # print(text)
-      # print(lat)
-      # 
-      # leafletProxy("map") %>%
-      #   clearGroup("cur_site") %>%
-      #   addPopups(data = sidDF, 
-      #             lat = ~lat, lng = ~lon, text,
-      #             group = "cur_site")
-      
-    } #else {
-      #print("outside istruthy")
-      #print(input$addSelect)
-    #}
+    }
 
   })
   
