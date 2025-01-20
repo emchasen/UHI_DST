@@ -225,15 +225,15 @@ server <- function(input, output, session) {
   observeEvent(input$cover, {
     
     if(input$cover == "On") {
-      updateSelectInput(inputId = "uhi2024", selected = "None")
+      updateSelectInput(inputId = "uhi2023", selected = "None")
       updateSelectInput(inputId = "uhiJuly", selected = "None")
     }
     
   })
   
-  observeEvent(input$uhi2024, {
+  observeEvent(input$uhi2023, {
     
-    if(input$uhi2024 != "None") {
+    if(input$uhi2023 != "None") {
       updateSelectInput(inputId = "cover", selected = "Off")
       updateSelectInput(inputId = "uhiJuly", selected = "None")
     }
@@ -244,7 +244,7 @@ server <- function(input, output, session) {
     
     if(input$uhiJuly != "None") {
       updateSelectInput(inputId = "cover", selected = "Off")
-      updateSelectInput(inputId = "uhi2024", selected = "None")
+      updateSelectInput(inputId = "uhi2023", selected = "None")
     }
     
   })

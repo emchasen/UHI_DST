@@ -25,25 +25,15 @@ ui <- fluidPage(
                           withSpinner(type = 3,
                                       color.background = "white")),
                  column(2, 
-                        # radioButtons("layers", "Map layers:",
-                        #               choices = c("Land cover" = "landCover",
-                        #                           "Jan 2023 day" = "janDay",
-                        #                           "Jan 2023 night" = "janNight",
-                        #                           "Jul 2023 day" = "julDay",
-                        #                           "Jul 2023 night" = "julNight",
-                        #                           "None" = "none"),
-                        #              selected = "none"),
-                        #selectInput("layers", "Map layers*", choices = layerChoices, selected = "None"),
-                        #helpText("*Month. day/night layers display monthly average temperatures (°F) from 2023."),
                         h4("Map layers"),
                         wellPanel(
-                        
-                        selectInput("cover", "Land cover", choices = c("Off", "On"), selected = "Off"),
-                        h5("Monthly temperature averages (°F)"),
-                        selectInput("uhi2023", "2023", choices = temp2023, selected = "None"),
-                        selectInput("uhiJuly", "2012-2022 July", choices = tempJuly, selected = "None"))
+                          selectInput("cover", "Land cover", choices = c("Off", "On"), selected = "Off"),
+                          h5("Monthly temperature averages (°F)"),
+                          selectInput("uhi2023", "2023", choices = temp2023, selected = "None"),
+                          selectInput("uhiJuly", "2012-2022 July", choices = tempJuly, selected = "None")
+                          )
+                        )
                  )
-               )
              ),
              hr(),
              tags$head(
@@ -61,13 +51,7 @@ ui <- fluidPage(
                  )
                )
              ),
-           #fluidRow(
-           # column(8,
-           uiOutput("plotUI")#),
-           #column(4,
-           #      uiOutput("addSelectionUI"))
-           #)
-             ),
+           uiOutput("plotUI")),
     tabPanel("Instructions",
              br(),
              p(HTML("<b>Data selection</b>")),
@@ -104,7 +88,16 @@ ui <- fluidPage(
              p(em("Land cover")),
              p("Land cover is displayed from the ", tags$a(href="https://dnr.wisconsin.gov/maps/WISCLAND", "Wiscland 2.0"), "data layer."),
              p(em("Heat maps")),
-             p("Describe the interpolation process here."),
+             p("The heat map layers show average temperatures at a 400-m resolution throughout Dane County.
+               These maps were produced using a regression-kriging approach, which incorporated impervious 
+               surface cover, distance to water, and land elevation in addition to sensor observations 
+               to predict temperature at each location. A full explanation of this approach can be 
+               found in Schatz and Kucharik (2014). The day layers represent an average of all 
+               15-minute observations between sunrise and sunset, and the night layers are an average 
+               of observations between sunset and sunrise."),
+             p(HTML("<b>References</b>")),
+             p("Schatz, J. and Kucharik, C. 2014. Seasonality of the Urban Heat Island Effect in Madison,
+               Wisconsin. Journal of Applied Meteorology and Climatology, 53(10): 2371-2386"),
              br(),
              br(),
              hr(style = "margin-top:0px"),

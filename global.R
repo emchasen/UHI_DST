@@ -87,9 +87,6 @@ day21 <- rast("data/July2021_daytime_degF.tif")
 night21 <- rast("data/July2021_nighttime_degF.tif")
 day22 <- rast("data/July2022_daytime_degF.tif")
 night22 <- rast("data/July2022_nighttime_degF.tif")
-day23 <- rast("data/July2023_daytime_degF.tif")
-night23 <- rast("data/July2023_nighttime_degF.tif")
-
 
 # layerChoices <- c("None", "Land cover", "Jan. '24 day", "Jan. '24 night", "Feb. '24 day", "Feb. '24 night", "Mar. '24 day", "Mar. '24 night",
 #                   "Apr. '24 day", "Apr. '24 night", "May '24 day", "May '24 night", "Jun. '24 day", "Jun. '24 night",
